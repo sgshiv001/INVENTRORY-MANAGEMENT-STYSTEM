@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="A lightweight inventory management system for products, suppliers, and stock movements.">
+  <title>StockFlow — Inventory Management</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar" id="sidebar">
+      <a class="brand" href="#dashboard" aria-label="StockFlow home">
+        <span class="brand-mark">SF</span>
+        <span><strong>StockFlow</strong><small>Inventory System</small></span>
+      </a>
+      <nav aria-label="Main navigation">
+        <button class="nav-link active" data-view="dashboard"><span>⌂</span> Dashboard</button>
+        <button class="nav-link" data-view="products"><span>▦</span> Products</button>
+        <button class="nav-link" data-view="movements"><span>⇄</span> Stock Movements</button>
+        <button class="nav-link" data-view="suppliers"><span>♧</span> Suppliers</button>
+      </nav>
+      <div class="sidebar-footer">
+        <p>Local workspace</p>
+        <small>Data is saved in this browser.</small>
+      </div>
+    </aside>
+
+    <main>
+      <header class="topbar">
+        <button class="icon-btn menu-btn" id="menuBtn" aria-label="Toggle menu">☰</button>
+        <div>
+          <h1 id="pageTitle">Dashboard</h1>
+          <p id="pageSubtitle">A clear view of your inventory today.</p>
+        </div>
+        <div class="topbar-actions">
+          <button class="btn secondary" id="exportBtn">Export CSV</button>
+          <button class="btn primary" id="quickAddBtn">+ Add product</button>
+        </div>
+      </header>
+
+      <section class="view active" id="dashboardView">
+        <div class="metric-grid">
+          <article class="metric-card blue"><div class="metric-icon">▦</div><div><span>Total products</span><strong id="metricProducts">0</strong><small id="metricCategories">0 categories</small></div></article>
+          <article class="metric-card green"><div class="metric-icon">✓</div><div><span>Units in stock</span><strong id="metricUnits">0</strong><small>Across all products</small></div></article>
+          <article class="metric-card amber"><div class="metric-icon">!</div><div><span>Low stock</span><strong id="metricLow">0</strong><small>Needs attention</small></div></article>
+          <article class="metric-card violet"><div class="metric-icon">₹</div><div><span>Inventory value</span><strong id="metricValue">₹0</strong><small>At cost price</small></div></article>
+        </div>
+
+        <div class="dashboard-grid">
+          <article class="panel chart-panel">
+            <div class="panel-head"><div><h2>Stock by category</h2><p>Current units across your catalogue</p></div></div>
+            <div id="categoryChart" class="bar-chart"></div>
+          </article>
+          <article class="panel alerts-panel">
+            <div class="panel-head"><div><h2>Low-stock alerts</h2><p>Products at or below reorder level</p></div><button class="text-btn" data-go="products">View all</button></div>
+            <div id="lowStockList" class="alert-list"></div>
+          </article>
+        </div>
+
+        <article class="panel">
+          <div class="panel-head"><div><h2>Recent activity</h2><p>Latest inventory movements</p></div><button class="text-btn" data-go="movements">View history</button></div>
+          <div class="table-wrap"><table><thead><tr><th>Product</th><th>Type</th><th>Quantity</th><th>Date</th><th>Reference</th></tr></thead><tbody id="recentTable"></tbody></table></div>
+        </article>
+      </section>
+
+      <section class="view" id="productsView">
+        <div class="toolbar">
+          <label class="search"><span>⌕</span><input id="productSearch" type="search" placeholder="Search by name, SKU, or category…"></label>
+          <select id="categoryFilter" aria-label="Filter by category"><option value="">All categories</option></select>
+          <select id="stockFilter" aria-label="Filter by stock"><option value="">All stock levels</option><option value="low">Low stock</option><option value="out">Out of stock</option><option value="healthy">Healthy stock</option></select>
+          <button class="btn primary" id="addProductBtn">+ Add product</button>
+        </div>
+        <article class="panel table-panel">
+          <div class="table-wrap"><table><thead><tr><th>Product</th><th>SKU</th><th>Category</th><th>Stock</th><th>Cost</th><th>Value</th><th>Status</th><th></th></tr></thead><tbody id="productsTable"></tbody></table></div>
+          <div class="table-footer" id="productCount"></div>
+        </article>
+      </section>
+
+      <section class="view" id="movementsView">
+        <div class="toolbar end"><button class="btn primary" id="addMovementBtn">+ Record movement</button></div>
+        <article class="panel table-panel">
+          <div class="table-wrap"><table><thead><tr><th>Date</th><th>Product</th><th>Type</th><th>Quantity</th><th>Balance after</th><th>Reference</th><th>Notes</th></tr></thead><tbody id="movementsTable"></tbody></table></div>
+        </article>
+      </section>
+
+      <section class="view" id="suppliersView">
+        <div class="toolbar end"><button class="btn primary" id="addSupplierBtn">+ Add supplier</button></div>
+        <div class="supplier-grid" id="supplierGrid"></div>
+      </section>
+    </main>
+  </div>
+
+  <dialog id="productDialog">
+    <form method="dialog" id="productForm">
+      <div class="dialog-head"><div><h2 id="productDialogTitle">Add product</h2><p>Enter the item details below.</p></div><button class="close-btn" type="button" data-close-dialog aria-label="Close">×</button></div>
+      <input type="hidden" id="productId">
+      <div class="form-grid">
+        <label class="wide">Product name<input id="productName" required maxlength="80" placeholder="e.g. Wireless keyboard"></label>
+        <label>SKU<input id="productSku" required maxlength="30" placeholder="e.g. ELEC-001"></label>
+        <label>Category<input id="productCategory" required maxlength="40" placeholder="e.g. Electronics"></label>
+        <label>Quantity<input id="productQuantity" type="number" required min="0" step="1" value="0"></label>
+        <label>Reorder level<input id="productReorder" type="number" required min="0" step="1" value="5"></label>
+        <label>Cost price (₹)<input id="productCost" type="number" required min="0" step="0.01" value="0"></label>
+        <label>Selling price (₹)<input id="productPrice" type="number" required min="0" step="0.01" value="0"></label>
+        <label class="wide">Supplier<select id="productSupplier"><option value="">No supplier</option></select></label>
+      </div>
+      <div class="dialog-actions"><button class="btn secondary" type="button" data-close-dialog>Cancel</button><button class="btn primary" value="default" id="saveProductBtn">Save product</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="movementDialog">
+    <form method="dialog" id="movementForm">
+      <div class="dialog-head"><div><h2>Record stock movement</h2><p>Add or remove inventory with an audit trail.</p></div><button class="close-btn" type="button" data-close-dialog>×</button></div>
+      <div class="form-grid">
+        <label class="wide">Product<select id="movementProduct" required></select></label>
+        <label>Movement type<select id="movementType" required><option value="in">Stock in</option><option value="out">Stock out</option><option value="adjustment">Set exact quantity</option></select></label>
+        <label>Quantity<input id="movementQuantity" type="number" required min="0" step="1" value="1"></label>
+        <label class="wide">Reference<input id="movementReference" maxlength="40" placeholder="e.g. PO-1042 or SALE-218"></label>
+        <label class="wide">Notes<textarea id="movementNotes" rows="3" maxlength="160" placeholder="Optional notes"></textarea></label>
+      </div>
+      <p class="form-error" id="movementError"></p>
+      <div class="dialog-actions"><button class="btn secondary" type="button" data-close-dialog>Cancel</button><button class="btn primary" value="default">Record movement</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="supplierDialog">
+    <form method="dialog" id="supplierForm">
+      <div class="dialog-head"><div><h2 id="supplierDialogTitle">Add supplier</h2><p>Save supplier contact information.</p></div><button class="close-btn" type="button" data-close-dialog>×</button></div>
+      <input type="hidden" id="supplierId">
+      <div class="form-grid">
+        <label class="wide">Company name<input id="supplierName" required maxlength="80"></label>
+        <label>Contact person<input id="supplierContact" maxlength="60"></label>
+        <label>Phone<input id="supplierPhone" maxlength="30"></label>
+        <label class="wide">Email<input id="supplierEmail" type="email" maxlength="80"></label>
+        <label class="wide">Address<textarea id="supplierAddress" rows="3" maxlength="160"></textarea></label>
+      </div>
+      <div class="dialog-actions"><button class="btn secondary" type="button" data-close-dialog>Cancel</button><button class="btn primary" value="default">Save supplier</button></div>
+    </form>
+  </dialog>
+
+  <div class="toast" id="toast" role="status"></div>
+  <script src="app.js"></script>
+</body>
+</html>
