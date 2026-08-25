@@ -30,12 +30,13 @@ Manual inventory registers are difficult to search, update, and audit. They can 
 
 ## Modules
 
-1. **Dashboard** - Displays product count, total units, low-stock alerts, inventory value, category totals, and recent activity.
+1. **Dashboard** - Displays product count, total units, low-stock alerts, inventory value, gross margin, category totals, and recent activity.
 2. **Product management** - Supports adding, editing, deleting, searching, and filtering products.
-3. **Stock movement management** - Maintains an audit trail for incoming stock, outgoing stock, and manual adjustments.
-4. **Supplier management** - Stores supplier companies, contact details, and product relationships.
-5. **Reports** - Exports the current product catalogue and stock data as CSV.
-6. **Project overview** - Explains the objective, modules, data model, and normal workflow inside the application.
+3. **Reorder planning** - Calculates purchase quantities and estimated cost for products at or below reorder level.
+4. **Stock movement management** - Maintains an audit trail for incoming stock, outgoing stock, and manual adjustments.
+5. **Supplier management** - Stores supplier companies, contact details, and product relationships.
+6. **Reports** - Exports the current product catalogue and stock data as CSV.
+7. **Project overview** - Explains the objective, modules, data model, and normal workflow inside the application.
 
 ## Main features
 
@@ -44,6 +45,8 @@ Manual inventory registers are difficult to search, update, and audit. They can 
 - Unique SKU validation
 - Automatic low-stock and out-of-stock status
 - Inventory valuation in Indian rupees
+- Gross margin and stock health indicators
+- Suggested reorder quantities with supplier names
 - Stock availability validation
 - Complete inventory movement ledger
 - Supplier-to-product relationships
@@ -91,9 +94,10 @@ The application starts with realistic sample data. Changes are saved in the curr
 1. Open **Suppliers** and create a supplier record.
 2. Open **Products** and add a product with its SKU, quantity, prices, and reorder level.
 3. Use **Stock Movements** to record incoming or outgoing inventory.
-4. Review alerts and totals on the **Dashboard**.
-5. Select **Export CSV** to download the current inventory report.
-6. Open **About Project** and use **Reset demo data** before a classroom demonstration if needed.
+4. Open **Reorder Plan** to review suggested purchase quantities and estimated cost.
+5. Review alerts and totals on the **Dashboard**.
+6. Select **Export CSV** to download the current inventory report.
+7. Open **About Project** and use **Reset demo data** before a classroom demonstration if needed.
 
 ## Python report generator
 
@@ -145,6 +149,7 @@ inventrack/
 | Add a duplicate SKU | Application shows a validation message |
 | Remove more stock than available | Transaction is blocked |
 | Reduce quantity to the reorder level | Product appears in low-stock alerts |
+| Open Reorder Plan with low stock items | Suggested purchase quantities and estimated cost are shown |
 | Search by name, SKU, or category | Matching product rows are displayed |
 | Delete a supplier | Products remain, but the supplier link is cleared |
 | Reload the page | Saved records remain available |

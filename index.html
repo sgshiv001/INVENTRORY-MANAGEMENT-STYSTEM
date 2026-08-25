@@ -19,6 +19,7 @@
       <nav aria-label="Main navigation">
         <button class="nav-link active" data-view="dashboard"><span class="nav-icon">D</span> Dashboard</button>
         <button class="nav-link" data-view="products"><span class="nav-icon">P</span> Products</button>
+        <button class="nav-link" data-view="reorder"><span class="nav-icon">R</span> Reorder Plan</button>
         <button class="nav-link" data-view="movements"><span class="nav-icon">M</span> Stock Movements</button>
         <button class="nav-link" data-view="suppliers"><span class="nav-icon">S</span> Suppliers</button>
         <button class="nav-link" data-view="about"><span class="nav-icon">i</span> About Project</button>
@@ -58,9 +59,15 @@
             <div id="categoryChart" class="bar-chart"></div>
           </article>
           <article class="panel alerts-panel">
-            <div class="panel-head"><div><h2>Low-stock alerts</h2><p>Products at or below reorder level</p></div><button class="text-btn" data-go="products">View all</button></div>
+            <div class="panel-head"><div><h2>Low-stock alerts</h2><p>Products at or below reorder level</p></div><button class="text-btn" data-go="reorder">Plan orders</button></div>
             <div id="lowStockList" class="alert-list"></div>
           </article>
+        </div>
+
+        <div class="operations-strip">
+          <article><span>Stock health</span><strong id="stockHealth">0%</strong><small>Products above reorder level</small></article>
+          <article><span>Reorder budget</span><strong id="reorderBudget">&#8377;0</strong><small>Suggested spend at cost</small></article>
+          <article><span>Top supplier</span><strong id="topSupplier">--</strong><small>By linked products</small></article>
         </div>
 
         <article class="panel">
@@ -77,8 +84,20 @@
           <button class="btn primary" id="addProductBtn">+ Add product</button>
         </div>
         <article class="panel table-panel">
-          <div class="table-wrap"><table><thead><tr><th>Product</th><th>SKU</th><th>Category</th><th>Stock</th><th>Cost</th><th>Value</th><th>Status</th><th></th></tr></thead><tbody id="productsTable"></tbody></table></div>
+          <div class="table-wrap"><table><thead><tr><th>Product</th><th>SKU</th><th>Category</th><th>Stock</th><th>Cost</th><th>Price</th><th>Value</th><th>Margin</th><th>Supplier</th><th>Status</th><th></th></tr></thead><tbody id="productsTable"></tbody></table></div>
           <div class="table-footer" id="productCount"></div>
+        </article>
+      </section>
+
+      <section class="view" id="reorderView">
+        <div class="reorder-summary">
+          <article><span>Items to reorder</span><strong id="reorderItems">0</strong></article>
+          <article><span>Units required</span><strong id="reorderUnits">0</strong></article>
+          <article><span>Estimated cost</span><strong id="reorderCost">&#8377;0</strong></article>
+        </div>
+        <article class="panel table-panel">
+          <div class="panel-head"><div><h2>Suggested purchase list</h2><p>Calculated from current quantity and reorder level</p></div><button class="text-btn" data-go="suppliers">Supplier contacts</button></div>
+          <div class="table-wrap"><table><thead><tr><th>Product</th><th>Current</th><th>Reorder at</th><th>Suggested qty</th><th>Estimated cost</th><th>Supplier</th><th>Status</th></tr></thead><tbody id="reorderTable"></tbody></table></div>
         </article>
       </section>
 
@@ -116,7 +135,7 @@
           <article class="panel info-card">
             <span class="card-number">02</span>
             <h3>Core modules</h3>
-            <ul><li>Dashboard and analytics</li><li>Product catalogue</li><li>Stock movement ledger</li><li>Supplier management</li></ul>
+            <ul><li>Dashboard and analytics</li><li>Product catalogue</li><li>Reorder planning</li><li>Stock movement ledger</li><li>Supplier management</li></ul>
           </article>
           <article class="panel info-card">
             <span class="card-number">03</span>
@@ -131,7 +150,7 @@
           <div class="workflow-steps">
             <div><strong>1</strong><span>Add a supplier</span></div>
             <div><strong>2</strong><span>Create a product</span></div>
-            <div><strong>3</strong><span>Record stock in or out</span></div>
+            <div><strong>3</strong><span>Plan reorder needs</span></div>
             <div><strong>4</strong><span>Review and export</span></div>
           </div>
         </article>

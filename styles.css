@@ -17,6 +17,10 @@
 .metric-card.teal .metric-icon{color:#0f8f8c;background:#e6f7f6}
 .bar-fill{background:linear-gradient(90deg,#3159dc,#6d83e9)}
 .action-btn{font-size:11px;font-weight:700}
+.operations-strip,.reorder-summary{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-bottom:20px}
+.operations-strip article,.reorder-summary article{background:#fff;border:1px solid var(--line);border-left:4px solid var(--gold);border-radius:10px;padding:18px 20px;box-shadow:var(--shadow)}
+.operations-strip span,.operations-strip small,.reorder-summary span{display:block;color:var(--muted);font-size:11px;font-weight:700}
+.operations-strip strong,.reorder-summary strong{display:block;font-size:20px;margin:5px 0;color:var(--ink)}
 .project-hero{background:linear-gradient(125deg,#14213d 0%,#213a70 68%,#3159dc 100%);color:#fff;border-radius:16px;padding:38px 42px;margin-bottom:20px;display:flex;justify-content:space-between;align-items:center;gap:36px;box-shadow:0 16px 35px rgba(20,33,61,.18);position:relative;overflow:hidden}
 .project-hero:after{content:"";position:absolute;width:220px;height:220px;border:1px solid rgba(255,255,255,.12);border-radius:50%;right:-70px;top:-95px}
 .project-hero>div:first-child{max-width:700px;position:relative;z-index:1}
@@ -49,5 +53,5 @@
 .academic-note p{color:#7a6b4f;font-size:11px;margin:4px 0 0}
 
 @media(max-width:1100px){.project-grid{grid-template-columns:1fr 1fr}.project-grid .info-card:last-child{grid-column:1/-1}.workflow-steps{grid-template-columns:1fr 1fr;gap:24px}}
-@media(max-width:800px){.project-hero{padding:30px}.project-mark{display:none}}
+@media(max-width:800px){.project-hero{padding:30px}.project-mark{display:none}.operations-strip,.reorder-summary{grid-template-columns:1fr}}
 @media(max-width:520px){.project-grid,.workflow-steps{grid-template-columns:1fr}.project-grid .info-card:last-child{grid-column:auto}.project-hero{padding:26px 22px}.project-hero h2{font-size:24px}.academic-note{align-items:flex-start;flex-direction:column}}
