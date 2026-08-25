@@ -1,4 +1,5 @@
-const STORE_KEY = 'stockflow_inventory_v1';
+const STORE_KEY = 'inventrack_mca_v1';
+const LEGACY_STORE_KEY = 'stockflow_inventory_v1';
 const rupees = new Intl.NumberFormat('en-IN',{style:'currency',currency:'INR',maximumFractionDigits:0});
 const shortDate = new Intl.DateTimeFormat('en-IN',{day:'2-digit',month:'short',year:'numeric'});
 
@@ -30,7 +31,10 @@ const uid = prefix => prefix + Date.now().toString(36) + Math.random().toString(
 const escapeHtml = value => String(value ?? '').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
 
 function load(){
-  try{const saved=JSON.parse(localStorage.getItem(STORE_KEY));if(saved?.products&&saved?.suppliers&&saved?.movements)return saved;}catch{}
+  try{
+    const current=localStorage.getItem(STORE_KEY),saved=JSON.parse(current||localStorage.getItem(LEGACY_STORE_KEY));
+    if(saved?.products&&saved?.suppliers&&saved?.movements){if(!current)localStorage.setItem(STORE_KEY,JSON.stringify(saved));return saved}
+  }catch{}
   localStorage.setItem(STORE_KEY,JSON.stringify(seed));return structuredClone(seed);
 }
 function save(){localStorage.setItem(STORE_KEY,JSON.stringify(db));renderAll();}
@@ -39,7 +43,7 @@ function initials(name){return name.split(/\s+/).slice(0,2).map(x=>x[0]).join(''
 function productFor(id){return db.products.find(p=>p.id===id)}
 function statusFor(p){return p.quantity===0?['Out of stock','out']:p.quantity<=p.reorder?['Low stock','low']:['In stock','good']}
 
-const viewMeta={dashboard:['Dashboard','A clear view of your inventory today.'],products:['Products','Manage your product catalogue and stock levels.'],movements:['Stock Movements','Track every addition, sale, and adjustment.'],suppliers:['Suppliers','Manage the businesses that supply your stock.']};
+const viewMeta={dashboard:['Dashboard','A clear view of your inventory today.'],products:['Products','Manage your product catalogue and stock levels.'],movements:['Stock Movements','Track every addition, sale, and adjustment.'],suppliers:['Suppliers','Manage the businesses that supply your stock.'],about:['About Project','An MCA academic project built with core web technologies.']};
 function showView(name){
   document.querySelectorAll('.view').forEach(v=>v.classList.toggle('active',v.id===`${name}View`));
   document.querySelectorAll('.nav-link').forEach(n=>n.classList.toggle('active',n.dataset.view===name));
@@ -48,11 +52,11 @@ function showView(name){
 }
 
 function renderDashboard(){
-  const units=db.products.reduce((n,p)=>n+p.quantity,0),low=db.products.filter(p=>p.quantity<=p.reorder),value=db.products.reduce((n,p)=>n+p.quantity*p.cost,0),cats=[...new Set(db.products.map(p=>p.category))];
-  $('metricProducts').textContent=db.products.length;$('metricCategories').textContent=`${cats.length} ${cats.length===1?'category':'categories'}`;$('metricUnits').textContent=units.toLocaleString('en-IN');$('metricLow').textContent=low.length;$('metricValue').textContent=rupees.format(value);
+  const units=db.products.reduce((n,p)=>n+p.quantity,0),low=db.products.filter(p=>p.quantity<=p.reorder),value=db.products.reduce((n,p)=>n+p.quantity*p.cost,0),margin=db.products.reduce((n,p)=>n+p.quantity*(p.price-p.cost),0),cats=[...new Set(db.products.map(p=>p.category))];
+  $('metricProducts').textContent=db.products.length;$('metricCategories').textContent=`${cats.length} ${cats.length===1?'category':'categories'}`;$('metricUnits').textContent=units.toLocaleString('en-IN');$('metricLow').textContent=low.length;$('metricValue').textContent=rupees.format(value);$('metricMargin').textContent=rupees.format(margin);
   const totals=Object.entries(db.products.reduce((a,p)=>{a[p.category]=(a[p.category]||0)+p.quantity;return a},{})).sort((a,b)=>b[1]-a[1]);const max=Math.max(1,...totals.map(x=>x[1]));
   $('categoryChart').innerHTML=totals.length?totals.map(([cat,n])=>`<div class="bar-row"><label title="${escapeHtml(cat)}">${escapeHtml(cat)}</label><div class="bar-track"><div class="bar-fill" style="width:${Math.max(3,n/max*100)}%"></div></div><strong>${n}</strong></div>`).join(''):'<div class="empty">Add products to see category stock.</div>';
-  $('lowStockList').innerHTML=low.length?low.slice(0,5).map(p=>`<div class="alert-item"><div><strong>${escapeHtml(p.name)}</strong><small>${escapeHtml(p.sku)} · Reorder at ${p.reorder}</small></div><strong class="stock-number">${p.quantity} left</strong></div>`).join(''):'<div class="empty">Everything is well stocked.</div>';
+  $('lowStockList').innerHTML=low.length?low.slice(0,5).map(p=>`<div class="alert-item"><div><strong>${escapeHtml(p.name)}</strong><small>${escapeHtml(p.sku)} - Reorder at ${p.reorder}</small></div><strong class="stock-number">${p.quantity} left</strong></div>`).join(''):'<div class="empty">Everything is well stocked.</div>';
   const recent=[...db.movements].sort((a,b)=>new Date(b.date)-new Date(a.date)).slice(0,5);
   $('recentTable').innerHTML=recent.length?recent.map(m=>movementRow(m,false)).join(''):'<tr><td colspan="5" class="empty">No stock activity yet.</td></tr>';
 }
@@ -60,16 +64,16 @@ function renderDashboard(){
 function renderProducts(){
   const search=$('productSearch').value.toLowerCase(),cat=$('categoryFilter').value,stock=$('stockFilter').value;
   const filtered=db.products.filter(p=>{const matches=!search||[p.name,p.sku,p.category].some(x=>x.toLowerCase().includes(search));const state=statusFor(p)[1];return matches&&(!cat||p.category===cat)&&(!stock||state===stock||(stock==='healthy'&&state==='good'))});
-  $('productsTable').innerHTML=filtered.length?filtered.map(p=>{const status=statusFor(p);return `<tr><td><div class="product-cell"><span class="product-avatar">${initials(p.name)}</span><strong>${escapeHtml(p.name)}</strong></div></td><td>${escapeHtml(p.sku)}</td><td>${escapeHtml(p.category)}</td><td><strong>${p.quantity}</strong> units</td><td>${rupees.format(p.cost)}</td><td>${rupees.format(p.cost*p.quantity)}</td><td><span class="badge ${status[1]}">${status[0]}</span></td><td><div class="actions"><button class="action-btn" data-edit-product="${p.id}" title="Edit">✎</button><button class="action-btn" data-move-product="${p.id}" title="Move stock">⇄</button><button class="action-btn" data-delete-product="${p.id}" title="Delete">⌫</button></div></td></tr>`}).join(''):'<tr><td colspan="8" class="empty">No products match these filters.</td></tr>';
+  $('productsTable').innerHTML=filtered.length?filtered.map(p=>{const status=statusFor(p);return `<tr><td><div class="product-cell"><span class="product-avatar">${initials(p.name)}</span><strong>${escapeHtml(p.name)}</strong></div></td><td>${escapeHtml(p.sku)}</td><td>${escapeHtml(p.category)}</td><td><strong>${p.quantity}</strong> units</td><td>${rupees.format(p.cost)}</td><td>${rupees.format(p.cost*p.quantity)}</td><td><span class="badge ${status[1]}">${status[0]}</span></td><td><div class="actions"><button class="action-btn" data-edit-product="${p.id}" title="Edit product">Edit</button><button class="action-btn" data-move-product="${p.id}" title="Record stock movement">Stock</button><button class="action-btn" data-delete-product="${p.id}" title="Delete product">Delete</button></div></td></tr>`}).join(''):'<tr><td colspan="8" class="empty">No products match these filters.</td></tr>';
   $('productCount').textContent=`Showing ${filtered.length} of ${db.products.length} products`;
   const selected=$('categoryFilter').value,categories=[...new Set(db.products.map(p=>p.category))].sort();$('categoryFilter').innerHTML='<option value="">All categories</option>'+categories.map(c=>`<option ${c===selected?'selected':''}>${escapeHtml(c)}</option>`).join('');
 }
 
-function movementRow(m,full=true){const p=productFor(m.productId),sign=m.type==='out'?'-':m.type==='in'?'+':'=';return `<tr>${full?`<td>${shortDate.format(new Date(m.date))}</td>`:''}<td><strong>${escapeHtml(p?.name||'Deleted product')}</strong></td><td><span class="badge ${m.type}">${m.type==='in'?'Stock in':m.type==='out'?'Stock out':'Adjustment'}</span></td><td class="${m.type==='out'?'qty-negative':'qty-positive'}">${sign}${m.quantity}</td>${full?`<td>${m.balance}</td>`:`<td>${shortDate.format(new Date(m.date))}</td>`}<td>${escapeHtml(m.reference||'—')}</td>${full?`<td>${escapeHtml(m.notes||'—')}</td>`:''}</tr>`}
+function movementRow(m,full=true){const p=productFor(m.productId),sign=m.type==='out'?'-':m.type==='in'?'+':'=';return `<tr>${full?`<td>${shortDate.format(new Date(m.date))}</td>`:''}<td><strong>${escapeHtml(p?.name||'Deleted product')}</strong></td><td><span class="badge ${m.type}">${m.type==='in'?'Stock in':m.type==='out'?'Stock out':'Adjustment'}</span></td><td class="${m.type==='out'?'qty-negative':'qty-positive'}">${sign}${m.quantity}</td>${full?`<td>${m.balance}</td>`:`<td>${shortDate.format(new Date(m.date))}</td>`}<td>${escapeHtml(m.reference||'--')}</td>${full?`<td>${escapeHtml(m.notes||'--')}</td>`:''}</tr>`}
 function renderMovements(){const rows=[...db.movements].sort((a,b)=>new Date(b.date)-new Date(a.date));$('movementsTable').innerHTML=rows.length?rows.map(m=>movementRow(m)).join(''):'<tr><td colspan="7" class="empty">No stock movements recorded.</td></tr>'}
 
 function renderSuppliers(){
-  $('supplierGrid').innerHTML=db.suppliers.length?db.suppliers.map(s=>{const count=db.products.filter(p=>p.supplierId===s.id).length;return `<article class="supplier-card"><div class="supplier-card-head"><span class="supplier-logo">${initials(s.name)}</span><div class="actions"><button class="action-btn" data-edit-supplier="${s.id}">✎</button><button class="action-btn" data-delete-supplier="${s.id}">⌫</button></div></div><h3>${escapeHtml(s.name)}</h3><p class="contact">${escapeHtml(s.contact||'No contact person')}</p><div class="supplier-details"><a href="tel:${escapeHtml(s.phone)}">☎ ${escapeHtml(s.phone||'No phone')}</a><a href="mailto:${escapeHtml(s.email)}">✉ ${escapeHtml(s.email||'No email')}</a><span>⌖ ${escapeHtml(s.address||'No address')}</span></div><div class="supplier-meta">Supplies ${count} ${count===1?'product':'products'}</div></article>`}).join(''):'<div class="panel empty">No suppliers added yet.</div>';
+  $('supplierGrid').innerHTML=db.suppliers.length?db.suppliers.map(s=>{const count=db.products.filter(p=>p.supplierId===s.id).length;return `<article class="supplier-card"><div class="supplier-card-head"><span class="supplier-logo">${initials(s.name)}</span><div class="actions"><button class="action-btn" data-edit-supplier="${s.id}" title="Edit supplier">Edit</button><button class="action-btn" data-delete-supplier="${s.id}" title="Delete supplier">Delete</button></div></div><h3>${escapeHtml(s.name)}</h3><p class="contact">${escapeHtml(s.contact||'No contact person')}</p><div class="supplier-details"><a href="tel:${escapeHtml(s.phone)}">Phone: ${escapeHtml(s.phone||'No phone')}</a><a href="mailto:${escapeHtml(s.email)}">Email: ${escapeHtml(s.email||'No email')}</a><span>Address: ${escapeHtml(s.address||'No address')}</span></div><div class="supplier-meta">Supplies ${count} ${count===1?'product':'products'}</div></article>`}).join(''):'<div class="panel empty">No suppliers added yet.</div>';
 }
 function fillSelects(){
   const supplierValue=$('productSupplier').value;$('productSupplier').innerHTML='<option value="">No supplier</option>'+db.suppliers.map(s=>`<option value="${s.id}" ${s.id===supplierValue?'selected':''}>${escapeHtml(s.name)}</option>`).join('');
@@ -98,5 +102,6 @@ document.addEventListener('click',e=>{
   if(editS)openSupplier(editS.dataset.editSupplier);if(deleteS){const id=deleteS.dataset.deleteSupplier,s=db.suppliers.find(x=>x.id===id);if(confirm(`Delete supplier ${s.name}?`)){db.suppliers=db.suppliers.filter(x=>x.id!==id);db.products.forEach(p=>{if(p.supplierId===id)p.supplierId=''});save();toast('Supplier deleted.')}}
 });
 $('quickAddBtn').onclick=$('addProductBtn').onclick=()=>openProduct();$('addMovementBtn').onclick=()=>openMovement();$('addSupplierBtn').onclick=()=>openSupplier();$('menuBtn').onclick=()=>$('sidebar').classList.toggle('open');$('productSearch').oninput=renderProducts;$('categoryFilter').onchange=renderProducts;$('stockFilter').onchange=renderProducts;
-$('exportBtn').onclick=()=>{const headers=['Name','SKU','Category','Quantity','Reorder Level','Cost Price','Selling Price','Supplier'];const rows=db.products.map(p=>[p.name,p.sku,p.category,p.quantity,p.reorder,p.cost,p.price,db.suppliers.find(s=>s.id===p.supplierId)?.name||'']);const csv=[headers,...rows].map(r=>r.map(v=>`"${String(v).replaceAll('"','""')}"`).join(',')).join('\r\n');const blob=new Blob([csv],{type:'text/csv'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=`stockflow-inventory-${new Date().toISOString().slice(0,10)}.csv`;a.click();URL.revokeObjectURL(url);toast('Inventory exported.')};
+$('resetDataBtn').onclick=()=>{if(confirm('Reset all records to the original demo data?')){db=structuredClone(seed);save();toast('Demo data restored.')}};
+$('exportBtn').onclick=()=>{const headers=['Name','SKU','Category','Quantity','Reorder Level','Cost Price','Selling Price','Supplier'];const rows=db.products.map(p=>[p.name,p.sku,p.category,p.quantity,p.reorder,p.cost,p.price,db.suppliers.find(s=>s.id===p.supplierId)?.name||'']);const csv=[headers,...rows].map(r=>r.map(v=>`"${String(v).replaceAll('"','""')}"`).join(',')).join('\r\n');const blob=new Blob([csv],{type:'text/csv'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=`inventrack-inventory-${new Date().toISOString().slice(0,10)}.csv`;a.click();URL.revokeObjectURL(url);toast('Inventory exported.')};
 window.addEventListener('hashchange',()=>{const v=location.hash.slice(1);if(viewMeta[v])showView(v)});renderAll();showView(viewMeta[location.hash.slice(1)]?location.hash.slice(1):'dashboard');

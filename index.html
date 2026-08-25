@@ -3,32 +3,36 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="A lightweight inventory management system for products, suppliers, and stock movements.">
-  <title>StockFlow — Inventory Management</title>
+  <meta name="description" content="InvenTrack is an MCA academic project for managing products, suppliers, stock levels, and inventory movements.">
+  <meta name="keywords" content="inventory management system, MCA project, JavaScript project, stock management">
+  <meta name="theme-color" content="#14213d">
+  <title>InvenTrack | MCA Inventory Management System</title>
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
   <div class="app-shell">
     <aside class="sidebar" id="sidebar">
-      <a class="brand" href="#dashboard" aria-label="StockFlow home">
-        <span class="brand-mark">SF</span>
-        <span><strong>StockFlow</strong><small>Inventory System</small></span>
+      <a class="brand" href="#dashboard" aria-label="InvenTrack home">
+        <span class="brand-mark">IT</span>
+        <span><strong>InvenTrack</strong><small>MCA Project</small></span>
       </a>
       <nav aria-label="Main navigation">
-        <button class="nav-link active" data-view="dashboard"><span>⌂</span> Dashboard</button>
-        <button class="nav-link" data-view="products"><span>▦</span> Products</button>
-        <button class="nav-link" data-view="movements"><span>⇄</span> Stock Movements</button>
-        <button class="nav-link" data-view="suppliers"><span>♧</span> Suppliers</button>
+        <button class="nav-link active" data-view="dashboard"><span class="nav-icon">D</span> Dashboard</button>
+        <button class="nav-link" data-view="products"><span class="nav-icon">P</span> Products</button>
+        <button class="nav-link" data-view="movements"><span class="nav-icon">M</span> Stock Movements</button>
+        <button class="nav-link" data-view="suppliers"><span class="nav-icon">S</span> Suppliers</button>
+        <button class="nav-link" data-view="about"><span class="nav-icon">i</span> About Project</button>
       </nav>
       <div class="sidebar-footer">
-        <p>Local workspace</p>
-        <small>Data is saved in this browser.</small>
+        <span class="course-badge">ACADEMIC DEMO</span>
+        <p>Master of Computer Applications</p>
+        <small>Frontend mini project &middot; 2026</small>
       </div>
     </aside>
 
     <main>
       <header class="topbar">
-        <button class="icon-btn menu-btn" id="menuBtn" aria-label="Toggle menu">☰</button>
+        <button class="icon-btn menu-btn" id="menuBtn" aria-label="Toggle menu">&#9776;</button>
         <div>
           <h1 id="pageTitle">Dashboard</h1>
           <p id="pageSubtitle">A clear view of your inventory today.</p>
@@ -41,10 +45,11 @@
 
       <section class="view active" id="dashboardView">
         <div class="metric-grid">
-          <article class="metric-card blue"><div class="metric-icon">▦</div><div><span>Total products</span><strong id="metricProducts">0</strong><small id="metricCategories">0 categories</small></div></article>
-          <article class="metric-card green"><div class="metric-icon">✓</div><div><span>Units in stock</span><strong id="metricUnits">0</strong><small>Across all products</small></div></article>
+          <article class="metric-card blue"><div class="metric-icon">P</div><div><span>Total products</span><strong id="metricProducts">0</strong><small id="metricCategories">0 categories</small></div></article>
+          <article class="metric-card green"><div class="metric-icon">U</div><div><span>Units in stock</span><strong id="metricUnits">0</strong><small>Across all products</small></div></article>
           <article class="metric-card amber"><div class="metric-icon">!</div><div><span>Low stock</span><strong id="metricLow">0</strong><small>Needs attention</small></div></article>
-          <article class="metric-card violet"><div class="metric-icon">₹</div><div><span>Inventory value</span><strong id="metricValue">₹0</strong><small>At cost price</small></div></article>
+          <article class="metric-card violet"><div class="metric-icon">&#8377;</div><div><span>Inventory value</span><strong id="metricValue">&#8377;0</strong><small>At cost price</small></div></article>
+          <article class="metric-card teal"><div class="metric-icon">M</div><div><span>Gross margin</span><strong id="metricMargin">&#8377;0</strong><small>Potential stock profit</small></div></article>
         </div>
 
         <div class="dashboard-grid">
@@ -66,7 +71,7 @@
 
       <section class="view" id="productsView">
         <div class="toolbar">
-          <label class="search"><span>⌕</span><input id="productSearch" type="search" placeholder="Search by name, SKU, or category…"></label>
+          <label class="search"><span aria-hidden="true">&#128269;</span><input id="productSearch" type="search" placeholder="Search by name, SKU, or category..."></label>
           <select id="categoryFilter" aria-label="Filter by category"><option value="">All categories</option></select>
           <select id="stockFilter" aria-label="Filter by stock"><option value="">All stock levels</option><option value="low">Low stock</option><option value="out">Out of stock</option><option value="healthy">Healthy stock</option></select>
           <button class="btn primary" id="addProductBtn">+ Add product</button>
@@ -88,12 +93,60 @@
         <div class="toolbar end"><button class="btn primary" id="addSupplierBtn">+ Add supplier</button></div>
         <div class="supplier-grid" id="supplierGrid"></div>
       </section>
+
+      <section class="view" id="aboutView">
+        <article class="project-hero">
+          <div>
+            <span class="eyebrow">MCA ACADEMIC PROJECT</span>
+            <h2>Inventory control made simple, clear, and practical.</h2>
+            <p>InvenTrack demonstrates how a browser-based information system can organize product records, monitor stock, manage suppliers, and maintain an auditable history of inventory changes.</p>
+            <div class="tech-pills" aria-label="Technologies used">
+              <span>HTML5</span><span>CSS3</span><span>JavaScript</span><span>Local Storage</span>
+            </div>
+          </div>
+          <div class="project-mark" aria-hidden="true"><strong>IT</strong><span>v1.0</span></div>
+        </article>
+
+        <div class="project-grid">
+          <article class="panel info-card">
+            <span class="card-number">01</span>
+            <h3>Project objective</h3>
+            <p>Replace error-prone manual stock registers with a responsive system that provides fast search, validation, low-stock visibility, and useful reports.</p>
+          </article>
+          <article class="panel info-card">
+            <span class="card-number">02</span>
+            <h3>Core modules</h3>
+            <ul><li>Dashboard and analytics</li><li>Product catalogue</li><li>Stock movement ledger</li><li>Supplier management</li></ul>
+          </article>
+          <article class="panel info-card">
+            <span class="card-number">03</span>
+            <h3>Data model</h3>
+            <div class="data-flow"><span>Suppliers</span><b>1:N</b><span>Products</span><b>1:N</b><span>Movements</span></div>
+            <p>Related records are connected with unique IDs, while SKU validation prevents duplicate product codes.</p>
+          </article>
+        </div>
+
+        <article class="panel workflow-panel">
+          <div class="panel-head"><div><h2>Typical workflow</h2><p>A complete inventory cycle in four steps</p></div></div>
+          <div class="workflow-steps">
+            <div><strong>1</strong><span>Add a supplier</span></div>
+            <div><strong>2</strong><span>Create a product</span></div>
+            <div><strong>3</strong><span>Record stock in or out</span></div>
+            <div><strong>4</strong><span>Review and export</span></div>
+          </div>
+        </article>
+
+        <article class="academic-note">
+          <div><strong>Ready for project demonstration</strong><p>The application includes realistic sample records. Use the reset button before a classroom demo to restore the original dataset.</p></div>
+          <button class="btn secondary" id="resetDataBtn">Reset demo data</button>
+        </article>
+      </section>
     </main>
   </div>
 
   <dialog id="productDialog">
     <form method="dialog" id="productForm">
-      <div class="dialog-head"><div><h2 id="productDialogTitle">Add product</h2><p>Enter the item details below.</p></div><button class="close-btn" type="button" data-close-dialog aria-label="Close">×</button></div>
+      <div class="dialog-head"><div><h2 id="productDialogTitle">Add product</h2><p>Enter the item details below.</p></div><button class="close-btn" type="button" data-close-dialog aria-label="Close">&times;</button></div>
       <input type="hidden" id="productId">
       <div class="form-grid">
         <label class="wide">Product name<input id="productName" required maxlength="80" placeholder="e.g. Wireless keyboard"></label>
@@ -101,8 +154,8 @@
         <label>Category<input id="productCategory" required maxlength="40" placeholder="e.g. Electronics"></label>
         <label>Quantity<input id="productQuantity" type="number" required min="0" step="1" value="0"></label>
         <label>Reorder level<input id="productReorder" type="number" required min="0" step="1" value="5"></label>
-        <label>Cost price (₹)<input id="productCost" type="number" required min="0" step="0.01" value="0"></label>
-        <label>Selling price (₹)<input id="productPrice" type="number" required min="0" step="0.01" value="0"></label>
+        <label>Cost price (&#8377;)<input id="productCost" type="number" required min="0" step="0.01" value="0"></label>
+        <label>Selling price (&#8377;)<input id="productPrice" type="number" required min="0" step="0.01" value="0"></label>
         <label class="wide">Supplier<select id="productSupplier"><option value="">No supplier</option></select></label>
       </div>
       <div class="dialog-actions"><button class="btn secondary" type="button" data-close-dialog>Cancel</button><button class="btn primary" value="default" id="saveProductBtn">Save product</button></div>
@@ -111,7 +164,7 @@
 
   <dialog id="movementDialog">
     <form method="dialog" id="movementForm">
-      <div class="dialog-head"><div><h2>Record stock movement</h2><p>Add or remove inventory with an audit trail.</p></div><button class="close-btn" type="button" data-close-dialog>×</button></div>
+      <div class="dialog-head"><div><h2>Record stock movement</h2><p>Add or remove inventory with an audit trail.</p></div><button class="close-btn" type="button" data-close-dialog aria-label="Close">&times;</button></div>
       <div class="form-grid">
         <label class="wide">Product<select id="movementProduct" required></select></label>
         <label>Movement type<select id="movementType" required><option value="in">Stock in</option><option value="out">Stock out</option><option value="adjustment">Set exact quantity</option></select></label>
@@ -126,7 +179,7 @@
 
   <dialog id="supplierDialog">
     <form method="dialog" id="supplierForm">
-      <div class="dialog-head"><div><h2 id="supplierDialogTitle">Add supplier</h2><p>Save supplier contact information.</p></div><button class="close-btn" type="button" data-close-dialog>×</button></div>
+      <div class="dialog-head"><div><h2 id="supplierDialogTitle">Add supplier</h2><p>Save supplier contact information.</p></div><button class="close-btn" type="button" data-close-dialog aria-label="Close">&times;</button></div>
       <input type="hidden" id="supplierId">
       <div class="form-grid">
         <label class="wide">Company name<input id="supplierName" required maxlength="80"></label>
