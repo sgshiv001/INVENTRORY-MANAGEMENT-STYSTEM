@@ -6,7 +6,7 @@ InvenTrack is a browser-based inventory management application developed as an M
 
 | Field | Details |
 | --- | --- |
-| Programme | Master of Computer Applications (MCA) |
+| Programm | Master of Computer Applications (MCA) |
 | Project type | Academic mini project |
 | Domain | Inventory and stock management |
 | Version | 1.0 |
