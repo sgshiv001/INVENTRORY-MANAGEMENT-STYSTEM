@@ -87,6 +87,7 @@ Supplier (1) -------- (N) Product (1) -------- (N) Stock Movement
 1. Clone or download this repository.
 2. Open the project folder.
 3. Double-click `index.html`, or open it in any modern web browser.
+4. In VS Code, use **Run and Debug** > **Open InvenTrack in Chrome**. This opens the local HTML file directly; no localhost server is required.
 
 The application starts with realistic sample data. Changes are saved in the current browser under the key `inventrack_mca_v1`.
 

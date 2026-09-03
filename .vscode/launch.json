@@ -14,8 +14,8 @@
         {
             "type": "chrome",
             "request": "launch",
-            "name": "Launch Chrome against localhost",
-            "url": "http://localhost:8080",
+            "name": "Open InvenTrack in Chrome",
+            "url": "file:///${workspaceFolder}/index.html",
             "webRoot": "${workspaceFolder}"
         }
     ]
