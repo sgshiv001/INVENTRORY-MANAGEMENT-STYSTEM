@@ -12,8 +12,6 @@ InvenTrack is a browser-based inventory management application developed as an M
 | Version | 1.0 |
 | Academic year | 2026 |
 
-> Before your final college submission, add your name, university roll number, college name, guide name, and GitHub repository URL to this section.
-
 ## Problem statement
 
 Manual inventory registers are difficult to search, update, and audit. They can result in duplicate records, incorrect stock balances, and delayed reordering. InvenTrack provides a simple digital workflow with input validation, automatic calculations, low-stock alerts, and a stock movement history.
