@@ -42,6 +42,31 @@ function toast(message){const el=$('toast');el.textContent=message;el.classList.
 function initials(name){return name.split(/\s+/).slice(0,2).map(x=>x[0]).join('').toUpperCase()}
 function productFor(id){return db.products.find(p=>p.id===id)}
 function statusFor(p){return p.quantity===0?['Out of stock','out']:p.quantity<=p.reorder?['Low stock','low']:['In stock','good']}
+function parseCsv(text){
+  const rows=[];let row=[],field='',quote=false;
+  for(let i=0;i<text.length;i++){
+    const char=text[i],next=text[i+1];
+    if(quote&&char==='"'&&next==='"'){field+='"';i++}
+    else if(char==='"')quote=!quote;
+    else if(char===','&&!quote){row.push(field);field=''}
+    else if((char==='\n'||char==='\r')&&!quote){if(char==='\r'&&next==='\n')i++;row.push(field);if(row.some(cell=>cell.trim()))rows.push(row);row=[];field=''}
+    else field+=char;
+  }
+  row.push(field);if(row.some(cell=>cell.trim()))rows.push(row);
+  return rows;
+}
+function importProductsFromCsv(text){
+  const rows=parseCsv(text),headers=rows.shift()?.map(h=>h.trim().toLowerCase())||[],required=['name','sku','category','quantity','reorder level','cost price','selling price'];
+  const missing=required.filter(name=>!headers.includes(name));
+  if(missing.length)throw new Error(`Missing columns: ${missing.join(', ')}`);
+  const index=name=>headers.indexOf(name),seen=new Set();
+  const products=rows.map((row,line)=>{const number=(name)=>Number(row[index(name)]||0),sku=(row[index('sku')]||'').trim(),name=(row[index('name')]||'').trim(),category=(row[index('category')]||'').trim();if(!name||!sku||!category)throw new Error(`Row ${line+2} needs name, SKU, and category.`);if(seen.has(sku.toLowerCase()))throw new Error(`Duplicate SKU in CSV: ${sku}`);seen.add(sku.toLowerCase());const quantity=number('quantity'),reorder=number('reorder level'),cost=number('cost price'),price=number('selling price');if([quantity,reorder,cost,price].some(n=>Number.isNaN(n)||n<0))throw new Error(`Row ${line+2} has invalid numeric values.`);return {id:uid('p'),name,sku,category,quantity,reorder,cost,price,supplierId:''}});
+  if(!products.length)throw new Error('No product rows found.');
+  db.products=products;
+  db.movements=products.filter(p=>p.quantity>0).map(p=>({id:uid('m'),productId:p.id,type:'in',quantity:p.quantity,balance:p.quantity,reference:'CSV IMPORT',notes:'Imported opening stock',date:new Date().toISOString()}));
+  save();
+  toast(`Imported ${products.length} products.`);
+}
 
 const viewMeta={dashboard:['Dashboard','A clear view of your inventory today.'],products:['Products','Manage your product catalogue and stock levels.'],reorder:['Reorder Plan','Prioritize purchases before stock runs out.'],movements:['Stock Movements','Track every addition, sale, and adjustment.'],suppliers:['Suppliers','Manage the businesses that supply your stock.'],about:['About Project','An MCA academic project built with core web technologies.']};
 function showView(name){
@@ -114,4 +139,6 @@ document.addEventListener('click',e=>{
 $('quickAddBtn').onclick=$('addProductBtn').onclick=()=>openProduct();$('addMovementBtn').onclick=()=>openMovement();$('addSupplierBtn').onclick=()=>openSupplier();$('menuBtn').onclick=()=>$('sidebar').classList.toggle('open');$('productSearch').oninput=renderProducts;$('categoryFilter').onchange=renderProducts;$('stockFilter').onchange=renderProducts;
 $('resetDataBtn').onclick=()=>{if(confirm('Reset all records to the original demo data?')){db=structuredClone(seed);save();toast('Demo data restored.')}};
 $('exportBtn').onclick=()=>{const headers=['Name','SKU','Category','Quantity','Reorder Level','Cost Price','Selling Price','Inventory Value','Gross Margin','Supplier','Status'];const rows=db.products.map(p=>[p.name,p.sku,p.category,p.quantity,p.reorder,p.cost,p.price,p.quantity*p.cost,p.quantity*(p.price-p.cost),db.suppliers.find(s=>s.id===p.supplierId)?.name||'',statusFor(p)[0]]);const csv=[headers,...rows].map(r=>r.map(v=>`"${String(v).replaceAll('"','""')}"`).join(',')).join('\r\n');const blob=new Blob([csv],{type:'text/csv'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=`inventrack-inventory-${new Date().toISOString().slice(0,10)}.csv`;a.click();URL.revokeObjectURL(url);toast('Inventory exported.')};
+$('importBtn').onclick=()=>$('importFile').click();
+$('importFile').onchange=e=>{const file=e.target.files[0];if(!file)return;const reader=new FileReader();reader.onload=()=>{try{importProductsFromCsv(reader.result)}catch(error){toast(error.message)}finally{e.target.value=''}};reader.readAsText(file)};
 window.addEventListener('hashchange',()=>{const v=location.hash.slice(1);if(viewMeta[v])showView(v)});renderAll();showView(viewMeta[location.hash.slice(1)]?location.hash.slice(1):'dashboard');

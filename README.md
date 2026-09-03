@@ -51,6 +51,7 @@ Manual inventory registers are difficult to search, update, and audit. They can 
 - Complete inventory movement ledger
 - Supplier-to-product relationships
 - CSV export
+- CSV import for replacing the current product catalogue
 - Persistent browser storage
 - Demo data reset for classroom presentation
 
@@ -97,7 +98,8 @@ The application starts with realistic sample data. Changes are saved in the curr
 4. Open **Reorder Plan** to review suggested purchase quantities and estimated cost.
 5. Review alerts and totals on the **Dashboard**.
 6. Select **Export CSV** to download the current inventory report.
-7. Open **About Project** and use **Reset demo data** before a classroom demonstration if needed.
+7. Select **Import CSV** to load a product catalogue with the same product columns used by the export file.
+8. Open **About Project** and use **Reset demo data** before a classroom demonstration if needed.
 
 ## Python report generator
 
@@ -140,6 +142,7 @@ inventrack/
 - Editing a product does not directly change its quantity; quantity changes must be recorded as movements.
 - Deleting a supplier safely removes its association from related products.
 - User-entered text is escaped before it is added to generated table/card markup.
+- Imported CSV files must include Name, SKU, Category, Quantity, Reorder Level, Cost Price, and Selling Price columns.
 
 ## Suggested test cases
 
