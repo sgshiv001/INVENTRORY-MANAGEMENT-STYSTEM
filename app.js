@@ -68,12 +68,13 @@ function importProductsFromCsv(text){
   toast(`Imported ${products.length} products.`);
 }
 
-const viewMeta={dashboard:['Dashboard','A clear view of your inventory today.'],products:['Products','Manage your product catalogue and stock levels.'],reorder:['Reorder Plan','Prioritize purchases before stock runs out.'],movements:['Stock Movements','Track every addition, sale, and adjustment.'],suppliers:['Suppliers','Manage the businesses that supply your stock.'],about:['About Project','An MCA academic project built with core web technologies.']};
+const viewMeta={dashboard:['Dashboard','A clear view of your inventory today.'],products:['Products','Manage your product catalogue and stock levels.'],reorder:['Reorder Plan','Prioritize purchases before stock runs out.'],movements:['Stock Movements','Track every addition, sale, and adjustment.'],suppliers:['Suppliers','Manage the businesses that supply your stock.'],logbook:['Log book','A transparent timeline of everything that changed in your workspace.'],about:['About Project','An MCA academic project built with core web technologies.']};
 function showView(name){
   document.querySelectorAll('.view').forEach(v=>v.classList.toggle('active',v.id===`${name}View`));
   document.querySelectorAll('.nav-link').forEach(n=>n.classList.toggle('active',n.dataset.view===name));
   $('pageTitle').textContent=viewMeta[name][0];$('pageSubtitle').textContent=viewMeta[name][1];
   $('sidebar').classList.remove('open');location.hash=name;
+  if(name==='logbook'&&typeof renderLogbook==='function')renderLogbook();
 }
 
 function renderDashboard(){
@@ -141,4 +142,85 @@ $('resetDataBtn').onclick=()=>{if(confirm('Reset all records to the original dem
 $('exportBtn').onclick=()=>{const headers=['Name','SKU','Category','Quantity','Reorder Level','Cost Price','Selling Price','Inventory Value','Gross Margin','Supplier','Status'];const rows=db.products.map(p=>[p.name,p.sku,p.category,p.quantity,p.reorder,p.cost,p.price,p.quantity*p.cost,p.quantity*(p.price-p.cost),db.suppliers.find(s=>s.id===p.supplierId)?.name||'',statusFor(p)[0]]);const csv=[headers,...rows].map(r=>r.map(v=>`"${String(v).replaceAll('"','""')}"`).join(',')).join('\r\n');const blob=new Blob([csv],{type:'text/csv'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=`inventrack-inventory-${new Date().toISOString().slice(0,10)}.csv`;a.click();URL.revokeObjectURL(url);toast('Inventory exported.')};
 $('importBtn').onclick=()=>$('importFile').click();
 $('importFile').onchange=e=>{const file=e.target.files[0];if(!file)return;const reader=new FileReader();reader.onload=()=>{try{importProductsFromCsv(reader.result)}catch(error){toast(error.message)}finally{e.target.value=''}};reader.readAsText(file)};
-window.addEventListener('hashchange',()=>{const v=location.hash.slice(1);if(viewMeta[v])showView(v)});renderAll();showView(viewMeta[location.hash.slice(1)]?location.hash.slice(1):'dashboard');
+window.addEventListener('hashchange',()=>{const v=location.hash.slice(1);if(viewMeta[v])showView(v)});
+
+/* Workspace enhancements are kept beside the original inventory model so existing
+   catalogue, movement, import, and export workflows remain backwards compatible. */
+const WORKSPACE_KEY='inventrack_workspace_v1';
+const roleDetails={
+  retailer:{label:'Retailer',description:'Focus on daily sales, stock levels, and fast-moving products.'},
+  wholesaler:{label:'Wholesaler',description:'Coordinate suppliers, bulk orders, and replenishment planning.'},
+  admin:{label:'Administrator',description:'Oversee operations, audit activity, and configure the workspace.'}
+};
+let workspace=(()=>{try{return JSON.parse(localStorage.getItem(WORKSPACE_KEY))||{}}catch(error){return {}}})();
+workspace.role=roleDetails[workspace.role]?workspace.role:'';
+workspace.theme=workspace.theme==='dark'?'dark':'light';
+workspace.activity=Array.isArray(workspace.activity)?workspace.activity:[];
+function persistWorkspace(){localStorage.setItem(WORKSPACE_KEY,JSON.stringify(workspace))}
+function logActivity(action,detail=''){
+  workspace.activity.unshift({id:uid('a'),action,detail,date:new Date().toISOString(),role:workspace.role||'admin'});
+  workspace.activity=workspace.activity.slice(0,100);
+  persistWorkspace();
+}
+const baseSave=save;
+save=function(){
+  baseSave();
+  logActivity('Inventory data updated','Products, suppliers, or stock movements were changed.');
+  renderNotifications();
+  if($('logbookView')?.classList.contains('active'))renderLogbook();
+};
+function renderLogbook(){
+  const items=workspace.activity;
+  $('logbookSummary').textContent=`${items.length} ${items.length===1?'event':'events'} recorded in this workspace`;
+  $('activityList').innerHTML=items.length?items.map(item=>`<div class="activity-item"><span class="activity-dot"></span><div><strong>${escapeHtml(item.action)}</strong><p>${escapeHtml(item.detail)}</p><small>${shortDate.format(new Date(item.date))} · ${escapeHtml(roleDetails[item.role]?.label||'Administrator')}</small></div></div>`).join(''):'<div class="empty">No activity has been recorded yet.</div>';
+}
+function applyTheme(){
+  document.documentElement.dataset.theme=workspace.theme;
+  $('themeToggle').textContent=workspace.theme==='dark'?'☀':'☾';
+  $('themeToggle').title=workspace.theme==='dark'?'Switch to light mode':'Switch to dark mode';
+}
+function setRole(role){
+  workspace.role=roleDetails[role]?role:'admin';persistWorkspace();
+  $('roleChip').textContent=`${roleDetails[workspace.role].label} workspace`;
+  $('welcomeDialog').close();
+  logActivity('Workspace role selected',roleDetails[workspace.role].description);
+  toast(`${roleDetails[workspace.role].label} workspace ready.`);
+}
+function notifications(){
+  return db.products.filter(p=>p.quantity<=p.reorder).map(p=>({id:p.id,title:`${p.name} needs attention`,detail:p.quantity===0?'Out of stock':`${p.quantity} units left; reorder at ${p.reorder}.`}));
+}
+function renderNotifications(){
+  const items=notifications(),count=$('notificationCount');
+  count.textContent=items.length;count.hidden=!items.length;
+  const panel=$('notificationPanel');if(!panel)return;
+  if(items.length){
+    panel.innerHTML='<strong>Notifications</strong>'+items.map(item=>`<div class="notification-item"><b>${escapeHtml(item.title)}</b><span>${escapeHtml(item.detail)}</span></div>`).join('');
+  }else{
+    panel.innerHTML='<strong>Notifications</strong><div class="empty">You are all caught up.</div>';
+  }
+}
+function ensureNotificationPanel(){
+  if($('notificationPanel'))return;
+  const panel=document.createElement('div');panel.id='notificationPanel';panel.className='notification-panel';$('notificationBtn').after(panel);renderNotifications();
+}
+function renderEnhanced(){
+  renderLogbook();renderNotifications();
+  $('roleChip').textContent=`${roleDetails[workspace.role||'admin'].label} workspace`;
+  applyTheme();
+}
+document.addEventListener('click',event=>{
+  const role=event.target.closest('[data-role]');
+  if(role)setRole(role.dataset.role);
+  if(event.target.closest('#skipWelcomeBtn'))setRole('admin');
+  if(event.target.closest('#roleChip'))$('welcomeDialog').showModal();
+  if(event.target.closest('#themeToggle')){workspace.theme=workspace.theme==='dark'?'light':'dark';persistWorkspace();applyTheme();}
+  if(event.target.closest('#notificationBtn')){$('notificationPanel')?.classList.toggle('open');}
+  else if(!event.target.closest('#notificationPanel')){$('notificationPanel')?.classList.remove('open');}
+  if(event.target.closest('#clearLogBtn')){workspace.activity=[];persistWorkspace();renderLogbook();toast('Activity log cleared.');}
+  const nav=event.target.closest('[data-view]');if(nav&&nav.dataset.view==='logbook')renderLogbook();
+});
+renderAll();
+ensureNotificationPanel();
+renderEnhanced();
+showView(viewMeta[location.hash.slice(1)]?location.hash.slice(1):'dashboard');
+if(!workspace.role)$('welcomeDialog').showModal();
