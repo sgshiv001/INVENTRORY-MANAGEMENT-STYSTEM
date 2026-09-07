@@ -52,6 +52,10 @@ Manual inventory registers are difficult to search, update, and audit. They can 
 - CSV import for replacing the current product catalogue
 - Persistent browser storage
 - Demo data reset for classroom presentation
+- Welcome workspace setup for retailer, wholesaler, and administrator roles
+- Persisted light/dark mode preference
+- Low-stock notification center
+- Workspace activity log book with role and date context
 
 ## Technology stack
 

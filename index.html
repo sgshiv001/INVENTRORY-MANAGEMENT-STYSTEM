@@ -22,6 +22,7 @@
         <button class="nav-link" data-view="reorder"><span class="nav-icon">R</span> Reorder Plan</button>
         <button class="nav-link" data-view="movements"><span class="nav-icon">M</span> Stock Movements</button>
         <button class="nav-link" data-view="suppliers"><span class="nav-icon">S</span> Suppliers</button>
+        <button class="nav-link" data-view="logbook"><span class="nav-icon">L</span> Log book</button>
         <button class="nav-link" data-view="about"><span class="nav-icon">i</span> About Project</button>
       </nav>
       <div class="sidebar-footer">
@@ -39,6 +40,9 @@
           <p id="pageSubtitle">A clear view of your inventory today.</p>
         </div>
         <div class="topbar-actions">
+          <button type="button" class="role-chip" id="roleChip" title="Change workspace role" aria-label="Change workspace role">Admin workspace</button>
+          <button class="icon-btn theme-toggle" id="themeToggle" title="Toggle dark mode" aria-label="Toggle dark mode">&#9790;</button>
+          <button class="icon-btn notification-btn" id="notificationBtn" title="Open notifications" aria-label="Open notifications">&#128276;<b id="notificationCount">0</b></button>
           <input id="importFile" class="visually-hidden" type="file" accept=".csv,text/csv">
           <button class="btn secondary" id="importBtn">Import CSV</button>
           <button class="btn secondary" id="exportBtn">Export CSV</button>
@@ -113,6 +117,17 @@
       <section class="view" id="suppliersView">
         <div class="toolbar end"><button class="btn primary" id="addSupplierBtn">+ Add supplier</button></div>
         <div class="supplier-grid" id="supplierGrid"></div>
+      </section>
+
+      <section class="view" id="logbookView">
+        <div class="logbook-hero">
+          <div><span class="eyebrow">AUDIT TRAIL</span><h2>Every decision, in one place.</h2><p>Review stock changes, catalogue updates, and workspace events with a clear operational timeline.</p></div>
+          <button class="btn secondary" id="clearLogBtn">Clear activity</button>
+        </div>
+        <article class="panel">
+          <div class="panel-head"><div><h2>Activity log</h2><p id="logbookSummary">Recent workspace events</p></div></div>
+          <div class="activity-list" id="activityList"></div>
+        </article>
       </section>
 
       <section class="view" id="aboutView">
@@ -210,6 +225,19 @@
         <label class="wide">Address<textarea id="supplierAddress" rows="3" maxlength="160"></textarea></label>
       </div>
       <div class="dialog-actions"><button class="btn secondary" type="button" data-close-dialog>Cancel</button><button class="btn primary" value="default">Save supplier</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="welcomeDialog" class="welcome-dialog">
+    <form method="dialog" id="welcomeForm">
+      <div class="welcome-kicker">WELCOME TO INVENTRACK</div>
+      <div class="dialog-head"><div><h2>Set up your workspace</h2><p>Choose the role that best matches how you manage inventory.</p></div></div>
+      <div class="role-options">
+        <button type="button" class="role-option" data-role="retailer"><strong>Retailer</strong><span>Track daily sales, stock levels, and fast-moving products.</span></button>
+        <button type="button" class="role-option" data-role="wholesaler"><strong>Wholesaler</strong><span>Coordinate suppliers, bulk orders, and replenishment planning.</span></button>
+        <button type="button" class="role-option" data-role="admin"><strong>Administrator</strong><span>Oversee operations, audit activity, and configure the workspace.</span></button>
+      </div>
+      <div class="dialog-actions"><button class="btn secondary" type="button" id="skipWelcomeBtn">Use default admin</button></div>
     </form>
   </dialog>
 
