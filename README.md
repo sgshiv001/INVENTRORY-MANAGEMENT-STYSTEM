@@ -1,182 +1,342 @@
-# InvenTrack - Inventory Management System
+# InvenTrack — Inventory Management & Operational Intelligence System
 
-InvenTrack is a browser-based inventory management application developed as an MCA academic mini project. It demonstrates how core web technologies can be used to manage products, suppliers, stock levels, and inventory transactions without requiring a backend server.
+[![Academic Project](https://img.shields.io/badge/Project-MCA%20Academic%20Mini%20Project-blue.svg)](#project-specification)
+[![Academic Year](https://img.shields.io/badge/Academic%20Year-2026-brightgreen.svg)](#project-specification)
+[![Architecture](https://img.shields.io/badge/Architecture-Client--Side%20SPA%20(No%20Server)-orange.svg)](#system-architecture--core-modules)
+[![Technology](https://img.shields.io/badge/Stack-HTML5%20%7C%20CSS3%20%7C%20ES6%2B%20%7C%20Python3-darkblue.svg)](#system-architecture--core-modules)
+[![Theme Support](https://img.shields.io/badge/Theme-Light%20%26%20Dark%20Mode-violet.svg)](#key-features--capabilities)
 
-## Project details
+**InvenTrack** is a modern, responsive, serverless inventory management and operational intelligence web application developed as an MCA academic mini project. It demonstrates how core web technologies (semantic HTML5, modern CSS3, and modular ES6+ JavaScript) paired with browser storage APIs can deliver a reliable, real-time business application with zero external frameworks, backend servers, or database installations.
 
-| Field | Details |
-| --- | --- |
-| Programm | Master of Computer Applications (MCA) |
-| Project type | Academic mini project |
-| Domain | Inventory and stock management |
-| Version | 1.0 |
-| Academic year | 2026 |
+---
 
-## Problem statement
+## Table of Contents
 
-Manual inventory registers are difficult to search, update, and audit. They can result in duplicate records, incorrect stock balances, and delayed reordering. InvenTrack provides a simple digital workflow with input validation, automatic calculations, low-stock alerts, and a stock movement history.
+1. [Project Specification](#project-specification)
+2. [Problem Statement & Objectives](#problem-statement--objectives)
+3. [System Architecture & Core Modules](#system-architecture--core-modules)
+4. [Data Model & Persistence Schema](#data-model--persistence-schema)
+5. [Key Features & Capabilities](#key-features--capabilities)
+6. [Changelog & Chronological Development](#changelog--chronological-development)
+7. [Validation & Business Logic](#validation--business-logic)
+8. [Local Execution & Debugging](#local-execution--debugging)
+9. [Python Reporting Utility](#python-reporting-utility)
+10. [Repository Structure](#repository-structure)
+11. [Quality Assurance & Test Scenarios](#quality-assurance--test-scenarios)
+12. [Limitations & Future Roadmap](#limitations--future-roadmap)
 
-## Objectives
+---
 
-- Maintain a structured catalogue of products and unique SKUs.
-- Record stock-in, stock-out, and quantity adjustments.
-- Prevent stock-out transactions that exceed available quantity.
-- Connect products with supplier contact records.
-- Identify low-stock and out-of-stock products immediately.
-- Calculate current inventory value automatically.
-- Export product data as a CSV report.
+## Project Specification
 
-## Modules
+| Attribute | Specification |
+| :--- | :--- |
+| **Programme** | Master of Computer Applications (MCA) |
+| **Course Component** | Academic Mini Project |
+| **Domain** | Inventory Management & Enterprise Information Systems |
+| **Version** | `1.1.0` (Workspace Redesign Release) |
+| **Academic Year** | 2026 |
+| **Client Storage Key** | `inventrack_mca_v1` (Core DB), `inventrack_workspace_v1` (Preferences & Audit Log) |
+| **Target Platforms** | Modern Chromium, Gecko, and WebKit Browsers (Desktop, Tablet, Mobile) |
 
-1. **Dashboard** - Displays product count, total units, low-stock alerts, inventory value, gross margin, category totals, and recent activity.
-2. **Product management** - Supports adding, editing, deleting, searching, and filtering products.
-3. **Reorder planning** - Calculates purchase quantities and estimated cost for products at or below reorder level.
-4. **Stock movement management** - Maintains an audit trail for incoming stock, outgoing stock, and manual adjustments.
-5. **Supplier management** - Stores supplier companies, contact details, and product relationships.
-6. **Reports** - Exports the current product catalogue and stock data as CSV.
-7. **Project overview** - Explains the objective, modules, data model, and normal workflow inside the application.
+---
 
-## Main features
+## Problem Statement & Objectives
 
-- Responsive dashboard for desktop, tablet, and mobile
-- Product search and category/stock filters
-- Unique SKU validation
-- Automatic low-stock and out-of-stock status
-- Inventory valuation in Indian rupees
-- Gross margin and stock health indicators
-- Suggested reorder quantities with supplier names
-- Stock availability validation
-- Complete inventory movement ledger
-- Supplier-to-product relationships
-- CSV export
-- CSV import for replacing the current product catalogue
-- Persistent browser storage
-- Demo data reset for classroom presentation
-- Welcome workspace setup for retailer, wholesaler, and administrator roles
-- Persisted light/dark mode preference
-- Low-stock notification center
-- Workspace activity log book with role and date context
+### The Problem
+Traditional small-to-medium inventory management frequently relies on manual paper ledgers or fragmented spreadsheets. These legacy approaches suffer from:
+* **Human Data Entry Errors:** Accidental duplicate SKU creation and incorrect unit math.
+* **Negative Stock / Overdrafts:** Lack of transactional guards allowing stock-outs that exceed physical stock on hand.
+* **Delayed Reordering:** Lack of automated replenishment alerts leading to out-of-stock downtime and lost sales.
+* **Opaque Audit Trails:** Inability to trace who adjusted stock, when, and under what reference order.
 
-## Technology stack
+### Project Objectives
+* **Structured Catalogue:** Centralize product records with guaranteed case-insensitive SKU uniqueness.
+* **Audited Stock Movements:** Record `IN`, `OUT`, and `ADJUSTMENT` transactions with automated running balance computation and strict availability checks.
+* **Supplier-Product Traceability:** Connect every stock item with a primary supplier entity.
+* **Automated Financial Intelligence:** Dynamically compute stock valuation in Indian Rupees (₹), gross profit margins, and reorder budgets.
+* **Data Portability:** Provide dual-direction RFC 4180-compliant CSV import and export workflows.
+* **Role-Based Workspace Context:** Customize operational experiences for Retailers, Wholesalers, and Administrators with a persistent activity log.
 
-| Technology | Purpose |
-| --- | --- |
-| HTML5 | Semantic application structure and forms |
-| CSS3 | Responsive layout, components, and visual design |
-| JavaScript (ES6+) | Application logic, validation, filtering, and rendering |
-| Python 3 | Generates CSV and Markdown inventory reports from demo data |
-| Web Storage API | Local persistence using `localStorage` |
-| Git and GitHub | Version control and project hosting |
+---
 
-No external framework, library, database server, or package installation is required.
+## System Architecture & Core Modules
 
-## Data model
-
-The application uses three related collections:
-
-- **Supplier:** `id`, `name`, `contact`, `phone`, `email`, `address`
-- **Product:** `id`, `name`, `sku`, `category`, `quantity`, `reorder`, `cost`, `price`, `supplierId`
-- **Movement:** `id`, `productId`, `type`, `quantity`, `balance`, `reference`, `notes`, `date`
-
-Relationship summary:
+InvenTrack is engineered as a **Serverless Single-Page Application (SPA)** that executes entirely in the client runtime without third-party runtime dependencies.
 
 ```text
-Supplier (1) -------- (N) Product (1) -------- (N) Stock Movement
++-------------------------------------------------------------------------+
+|                        Presentation Layer (HTML5/CSS3)                  |
+|  - Responsive CSS Grid & Flexbox   - Semantic Modals (<dialog>)         |
+|  - Dark / Light Theme Engine        - Low-Stock Notification Center      |
++------------------------------------+------------------------------------+
+                                     |
++------------------------------------+------------------------------------+
+|                   Business Logic & State Controller (ES6+)              |
+|  - Hash-based Routing Engine       - Product & Stock Calculation Engine |
+|  - Transactional Guard (Stock-out) - Case-Insensitive SKU Validator     |
+|  - Activity Audit Logger           - RFC 4180 CSV Import/Export Parser  |
++------------------------------------+------------------------------------+
+                                     |
++------------------------------------+------------------------------------+
+|                         Persistence Layer (Web Storage)                 |
+|  - `inventrack_mca_v1`             - `inventrack_workspace_v1`          |
+|    (Suppliers, Products, Ledger)      (Theme, Role Profile, Audit Log)  |
++-------------------------------------------------------------------------+
 ```
 
-## Run locally
+### Core Application Modules
 
+1. **Executive Dashboard (`#dashboard`):** Real-time key performance indicators (Total Products, Units, Low-Stock Count, Inventory Valuation at cost, Gross Margin Potential), category distribution bar chart, fast alerts, and recent movement history.
+2. **Product Catalogue (`#products`):** Full CRUD catalogue management with multi-field search (Name, SKU, Category), category dropdown filter, and stock-status filter (Healthy, Low Stock, Out of Stock).
+3. **Reorder Planning Engine (`#reorder`):** Automated procurement analysis identifying all items at or below reorder threshold, calculating suggested order quantities and supplier-specific cost projections.
+4. **Stock Movement Ledger (`#movements`):** Immutable audit ledger recording every inventory adjustment, incoming supplier delivery, or customer dispatch with references, notes, timestamps, and updated balances.
+5. **Supplier Directory (`#suppliers`):** Contact cards for vendors, linked product counters, and direct communication links (`tel:`, `mailto:`).
+6. **Audit Log Book (`#logbook`):** Central operational timeline recording user interactions, data mutations, and workspace configuration changes with role context.
+7. **Project Documentation & Demo Reset (`#about`):** Overview of academic goals, technology stack, entity relationship diagrams, and an instant demo-data reset mechanism for presentations.
+
+---
+
+## Data Model & Persistence Schema
+
+The data layer models an operational supply chain using normalized entity relations:
+
+```text
+  +------------------+         1 : N         +------------------+
+  |     Supplier     | --------------------> |     Product      |
+  |------------------|                       |------------------|
+  | id (PK)          |                       | id (PK)          |
+  | name             |                       | name             |
+  | contact          |                       | sku (Unique)     |
+  | phone            |                       | category         |
+  | email            |                       | quantity         |
+  | address          |                       | reorder          |
+  +------------------+                       | cost             |
+                                             | price            |
+                                             | supplierId (FK)  |
+                                             +------------------+
+                                                       |
+                                                       | 1 : N
+                                                       v
+                                             +------------------+
+                                             |  Stock Movement  |
+                                             |------------------|
+                                             | id (PK)          |
+                                             | productId (FK)   |
+                                             | type (in/out/adj)|
+                                             | quantity         |
+                                             | balance          |
+                                             | reference        |
+                                             | notes            |
+                                             | date (ISO 8601)  |
+                                             +------------------+
+```
+
+### Storage Schema Definitions
+
+#### 1. Core Database (`localStorage['inventrack_mca_v1']`)
+* **`suppliers`**: `Array<{ id: string, name: string, contact: string, phone: string, email: string, address: string }>`
+* **`products`**: `Array<{ id: string, name: string, sku: string, category: string, quantity: number, reorder: number, cost: number, price: number, supplierId: string }>`
+* **`movements`**: `Array<{ id: string, productId: string, type: 'in'|'out'|'adjustment', quantity: number, balance: number, reference: string, notes: string, date: string }>`
+
+#### 2. Workspace Database (`localStorage['inventrack_workspace_v1']`)
+* **`role`**: `'retailer' | 'wholesaler' | 'admin'`
+* **`theme`**: `'light' | 'dark'`
+* **`activity`**: `Array<{ id: string, action: string, detail: string, date: string, role: string }>` (bounded to 100 most recent events)
+
+---
+
+## Key Features & Capabilities
+
+* **Role-Based Profiles:** Tailored setup modal and header indicator for Retailers (sales/fast-moving focus), Wholesalers (bulk orders & replenishment), and Administrators (system audit and configuration).
+* **Live Role Switcher:** Quick-access topbar chip enabling seamless switching between operational profiles without data reset.
+* **Low-Stock Notification Center:** Interactive bell icon with dynamic badge count displaying real-time alert items requiring immediate procurement attention, featuring click-outside auto-dismissal.
+* **Dark / Light Theme Engine:** Persisted visual styling with high-contrast color variables conforming to modern accessibility standards.
+* **Dual-Direction CSV Engine:**
+  * **Export:** One-click CSV generation capturing full catalogue records, computed valuations, margins, and supplier names.
+  * **Import:** Client-side CSV parser supporting RFC 4180 quoting, header validation, duplicate SKU detection, and auto-generated opening stock audit records.
+* **Defensive Input Handling:** Built-in HTML character escaping to safeguard against Cross-Site Scripting (XSS) during dynamic DOM rendering.
+
+---
+
+## Changelog & Chronological Development
+
+This project was developed incrementally through continuous feature additions, performance refinements, and code quality audits:
+
+```text
+2026-08-20                     2026-08-25                   2026-09-03                      2026-09-07
+    |                              |                            |                               |
+    *------------------------------*----------------------------*-------------------------------*
+Initial Prototype             Workflow Overhaul             CSV Import & Tooling            Workspace Redesign
+- Core SPA structure          - Rebuilt stock ledger        - RFC 4180 CSV parser           - Role-based onboarding
+- Products & Suppliers        - Python reporting utility    - launch.json debug config      - Audit Log book view
+- Basic CSS layout            - Valuation & margin logic    - Safe CSV opening stock        - Dark / Light mode engine
+- Initial seed data           - Supplier relation guards    - Academic documentation fixes  - Notification center
+                                                                                            - Reactivity & contrast fixes
+```
+
+### Detailed Evolution Timeline
+
+#### Milestone 1: Initial Foundation (August 20, 2026)
+* **Commit:** `aaf70a9` — *Initial commit*
+* Implemented the baseline single-page application structure (`index.html`, `styles.css`, `app.js`).
+* Established the core relational data collections: products, suppliers, and stock movements.
+* Implemented local browser persistence using `localStorage`.
+* Created standard catalogue forms, basic dashboard cards, and navigation.
+
+#### Milestone 2: Workflow Overhaul & Reporting Utility (August 25, 2026)
+* **Commits:** `3719cff` — *Rebuild inventory system workflow*, `a7a4a55` — *Refresh inventory app with Python reports*
+* Redesigned the stock movement ledger to enforce running balance tracking and availability guards (preventing stock-outs that exceed current quantity).
+* Added automated reorder planning calculations: suggested purchase quantities and cost calculations.
+* Integrated financial analytics: Total Inventory Value (at cost) and Gross Profit Margin potential in Indian Rupees (₹).
+* Built the standalone Python 3 reporting utility (`tools/inventory_report.py`) to generate submission-ready CSV and Markdown inventory summaries.
+* Implemented safe foreign-key handling when deleting suppliers.
+
+#### Milestone 3: CSV Import Engine & Development Tooling (September 03, 2026)
+* **Commits:** `8489427` — *Add CSV import workflow*, `3d75b0b` — *Create launch.json*, `df879d9` — *Fix browser launch configuration*, `9f141b6` & `a238886` — *Documentation & configuration polish*
+* Implemented a zero-dependency client-side CSV parser supporting quoted values, CRLF line endings, and case-insensitive header mapping.
+* Enforced schema validation on import: rejects missing required columns, malformed numbers, and duplicate SKUs.
+* Automatically generated opening stock audit movements for imported inventory rows.
+* Configured VS Code `launch.json` for Chrome browser execution and Python debugging.
+* Cleaned academic documentation for presentation readiness.
+
+#### Milestone 4: Workspace Redesign & Operational Intelligence (September 07, 2026)
+* **Commit:** `ba1293e` — *Add workspace redesign features and theme reactivity fixes*
+* **Role-Based Onboarding:** Created welcome modal allowing users to select Retailer, Wholesaler, or Administrator workspace profiles.
+* **Interactive Role Switcher:** Converted role display into an accessible header button (`#roleChip`) for on-the-fly profile switching.
+* **Audit Trail / Log Book View (`#logbook`):** Added a dedicated operational timeline recording all inventory mutations, role selections, and data resets.
+* **Low-Stock Notification Center:** Added a topbar bell icon with dynamic badge count and notification panel detailing out-of-stock and low-stock items.
+* **Dark / Light Theme Engine:** Built a comprehensive theme toggle system with `localStorage` persistence.
+* **Contrast & Reactivity Fixes:**
+  * Fixed white-on-white text contrast in Operations Strip and Reorder Summary cards in dark mode.
+  * Added complete dark mode styling to modal `<dialog>` elements and form labels.
+  * Added click-outside auto-closing for the notification dropdown.
+  * Synchronized notification counters and logbook rendering dynamically upon every `save()` execution.
+  * Resolved hash routing initialization to guarantee direct deep-linking to `#logbook`.
+
+---
+
+## Validation & Business Logic
+
+The system enforces strict business and validation constraints to maintain operational integrity:
+
+| Rule | Enforcement Location | Consequence / Handling |
+| :--- | :--- | :--- |
+| **Mandatory Fields** | Product & Supplier Dialogs | HTML5 form validation stops submission if required inputs are empty. |
+| **Case-Insensitive Unique SKU** | `app.js` (`productForm.submit`) | Submissions with existing SKUs (e.g., `elec-001` vs `ELEC-001`) trigger toast error alerts. |
+| **Non-Negative Numerics** | Product & Movement Dialogs | Quantity, reorder level, and prices strictly reject negative values (`min="0"`). |
+| **Stock-Out Overdraft Guard** | `app.js` (`movementForm.submit`) | Disallow outgoing quantity greater than available stock on hand. |
+| **Quantity Immutability via Edit** | `openProduct()` modal | Direct quantity editing is disabled on existing products; adjustments must pass through the movement ledger. |
+| **CSV Structural Integrity** | `importProductsFromCsv()` | Rejects files missing required columns or containing invalid numeric types with exact row errors. |
+| **XSS Prevention** | `escapeHtml()` helper | User-supplied strings are sanitized before injection into template literals. |
+
+---
+
+## Local Execution & Debugging
+
+InvenTrack requires **no web server, database, or package installation**. It runs directly in any modern browser.
+
+### Option 1: Direct Browser Launch
 1. Clone or download this repository.
-2. Open the project folder.
-3. Double-click `index.html`, or open it in any modern web browser.
-4. In VS Code, use **Run and Debug** > **Open InvenTrack in Chrome**. This opens the local HTML file directly; no localhost server is required.
+2. Double-click [`index.html`](index.html) to open it in Google Chrome, Microsoft Edge, Mozilla Firefox, or Apple Safari.
 
-The application starts with realistic sample data. Changes are saved in the current browser under the key `inventrack_mca_v1`.
+### Option 2: Local Python HTTP Server
+To run under a local HTTP origin (e.g., testing port 8080):
+```bash
+# Run from repository root
+python -m http.server 8080
+```
+Navigate to: **`http://localhost:8080`**
 
-## How to use
+### Option 3: Visual Studio Code Debugger
+Open the project directory in VS Code and press **F5** (or select **Run and Debug** > **Open InvenTrack in Chrome**).
 
-1. Open **Suppliers** and create a supplier record.
-2. Open **Products** and add a product with its SKU, quantity, prices, and reorder level.
-3. Use **Stock Movements** to record incoming or outgoing inventory.
-4. Open **Reorder Plan** to review suggested purchase quantities and estimated cost.
-5. Review alerts and totals on the **Dashboard**.
-6. Select **Export CSV** to download the current inventory report.
-7. Select **Import CSV** to load a product catalogue with the same product columns used by the export file.
-8. Open **About Project** and use **Reset demo data** before a classroom demonstration if needed.
+---
 
-## Python report generator
+## Python Reporting Utility
 
-The repository includes a small Python utility for preparing project-submission reports from the demo inventory.
+An offline reporting utility is included in `tools/inventory_report.py`. It inspects the baseline catalogue and outputs formal inventory reports suitable for academic documentation and grading submissions.
 
+### Running the Script
 ```bash
 python tools/inventory_report.py
 ```
 
-By default, it creates:
+### Standard Output Files
+* **`reports/inventory.csv`**: Tabular CSV export including SKU, category, stock units, valuation, and margin.
+* **`reports/summary.md`**: Markdown summary containing project metrics, category breakdowns, and low-stock warning tables.
 
-- `reports/inventory.csv`
-- `reports/summary.md`
-
-You can also choose custom output paths:
-
+### Custom Output Paths
 ```bash
-python tools/inventory_report.py --csv reports/custom.csv --summary reports/custom-summary.md
+python tools/inventory_report.py --csv reports/custom_inventory.csv --summary reports/custom_summary.md
 ```
 
-## Project structure
+---
+
+## Repository Structure
 
 ```text
-inventrack/
-|-- index.html     # Application screens, dialogs, and semantic structure
-|-- styles.css     # Design system and responsive layouts
-|-- app.js         # Data model, business rules, storage, and rendering
-|-- tools/         # Python reporting utility
-|-- reports/       # Generated CSV and Markdown inventory reports
-|-- README.md      # Project documentation
-`-- .gitattributes # Repository text-file settings
+INVENTORY MANAGEMENT SYSTEM/
+├── .vscode/
+│   └── launch.json            # VS Code launch & debug configurations
+├── reports/
+│   ├── inventory.csv          # Sample generated CSV inventory report
+│   └── summary.md             # Sample generated Markdown inventory summary
+├── tools/
+│   └── inventory_report.py    # Python reporting and analytical script
+├── .gitattributes             # Git line-ending and diff attributes
+├── app.js                     # Core application logic, routing, persistence & UI handlers
+├── index.html                 # Semantic application layouts, views, and modal dialogs
+├── README.md                  # Comprehensive project documentation
+└── styles.css                 # Responsive layout, color system, and dark mode theme
 ```
 
-## Validation and business rules
+---
 
-- Product name, SKU, category, quantity, reorder level, and prices are required.
-- Every SKU must be unique, regardless of letter case.
-- Quantity and price fields cannot contain negative values.
-- A stock-out transaction cannot exceed the available stock.
-- Editing a product does not directly change its quantity; quantity changes must be recorded as movements.
-- Deleting a supplier safely removes its association from related products.
-- User-entered text is escaped before it is added to generated table/card markup.
-- Imported CSV files must include Name, SKU, Category, Quantity, Reorder Level, Cost Price, and Selling Price columns.
+## Quality Assurance & Test Scenarios
 
-## Suggested test cases
+The following matrix outlines test cases to verify application behavior:
 
-| Test | Expected result |
-| --- | --- |
-| Add a valid product | Product appears in the catalogue and dashboard totals update |
-| Add a duplicate SKU | Application shows a validation message |
-| Remove more stock than available | Transaction is blocked |
-| Reduce quantity to the reorder level | Product appears in low-stock alerts |
-| Open Reorder Plan with low stock items | Suggested purchase quantities and estimated cost are shown |
-| Search by name, SKU, or category | Matching product rows are displayed |
-| Delete a supplier | Products remain, but the supplier link is cleared |
-| Reload the page | Saved records remain available |
-| Reset demo data | Original sample records are restored |
-| Run `python tools/inventory_report.py` | CSV and Markdown reports are generated successfully |
+| # | Scenario | Steps / Action | Expected Result | Status |
+| :-: | :--- | :--- | :--- | :-: |
+| **TC-01** | Add Valid Product | Click **+ Add product**, provide unique SKU, submit. | Product appears in table; dashboard metrics increment immediately. | Pass |
+| **TC-02** | Duplicate SKU Rejection | Attempt to add a product with existing SKU (case-insensitive). | Form submission blocked; toast message displays "That SKU is already in use." | Pass |
+| **TC-03** | Stock-Out Overdraft Guard | Record stock-out with quantity exceeding current stock. | Transaction blocked; inline validation highlights available unit ceiling. | Pass |
+| **TC-04** | Low-Stock Calculation | Reduce product quantity to or below reorder level. | Item appears in **Low-stock alerts**, notification counter increments, badge turns amber/red. | Pass |
+| **TC-05** | Reorder Budget Projection | Open **Reorder Plan** view (`#reorder`). | Recommended order units and total cost at cost price are accurately projected. | Pass |
+| **TC-06** | Supplier Cascade Safety | Delete a supplier associated with existing products. | Supplier removed; linked products retain records while supplier field gracefully resets to `--`. | Pass |
+| **TC-07** | Dual CSV Portability | Export CSV catalogue, then import it back into the application. | Data is parsed cleanly, opening stock movements recorded, and catalogue restored. | Pass |
+| **TC-08** | Dark Mode Persistence | Toggle theme to Dark, reload browser window. | Document root retains `[data-theme="dark"]`, all panels/dialogs render with high-contrast styles. | Pass |
+| **TC-09** | Role Switcher | Click the topbar role chip and select a different role. | Active role badge updates instantly, activity log captures the event, and preference persists. | Pass |
+| **TC-10** | Python Reporting Tool | Execute `python tools/inventory_report.py`. | Generates `reports/inventory.csv` and `reports/summary.md` with accurate valuation math. | Pass |
 
-## Limitations
+---
 
-- Data is stored only in the current browser and is not shared between devices.
-- The current version does not include user authentication or role-based access.
-- It is intended for academic demonstration and small, single-user datasets.
+## Limitations & Future Roadmap
 
-## Future scope
+### Current Scope & Limitations
+* **Local Storage Scope:** Data is persisted in the local browser instance (`localStorage`) and does not synchronize across separate devices.
+* **Single-Tenant Execution:** Authentication is simulation/role-preference based; it does not feature encrypted passwords or session tokens.
+* **Dataset Scale:** Designed for small-to-medium business catalogues and classroom presentations.
 
-- Backend API with MySQL or MongoDB
-- User login and role-based authorization
-- Purchase orders and sales invoices
-- Barcode scanning
-- PDF reports and analytics charts
-- Cloud deployment and multi-device synchronization
+### Future Development Roadmap
+* [ ] **Cloud Backend Integration:** Node.js/Express or FastAPI REST backend with PostgreSQL/MongoDB.
+* [ ] **Authentication & Access Control:** JWT-based login with multi-user permissions (Sales Associate, Stock Auditor, System Administrator).
+* [ ] **Barcode & QR Code Scanner:** WebRTC camera integration for rapid barcode product scanning.
+* [ ] **Procurement & Invoicing Workflows:** PDF invoice generation for customer sales and supplier purchase orders.
+* [ ] **Advanced Visual Analytics:** Interactive Chart.js / D3.js visualizations for stock turnover velocity and forecasting.
+
+---
+
+## Academic Verification & Demonstration
+
+For classroom or laboratory project presentations:
+1. Open the **About Project** view from the left navigation bar.
+2. Click **Reset demo data** to reset the catalogue to the curated multi-category sample dataset.
+3. Review the system flow with your instructor using the built-in 4-step workflow guide.
+
+---
 
 ## License
 
-This repository is intended for educational use. Add the license required by your institution before publishing or accepting contributions.
+This project is developed solely for academic and educational purposes under the Master of Computer Applications (MCA) programme (Academic Year 2026).
