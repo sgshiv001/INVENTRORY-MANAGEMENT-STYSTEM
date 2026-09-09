@@ -22,10 +22,19 @@ const seed = {
     {id:'m2',productId:'p3',type:'out',quantity:6,balance:64,reference:'SALE-218',notes:'Customer order',date:'2026-08-19T14:10:00'},
     {id:'m3',productId:'p4',type:'out',quantity:2,balance:4,reference:'SALE-215',notes:'Corporate order',date:'2026-08-18T11:20:00'},
     {id:'m4',productId:'p5',type:'in',quantity:24,balance:42,reference:'PO-1039',notes:'Supplier delivery',date:'2026-08-17T16:00:00'}
+  ],
+  regions:[
+    {id:'r1',city:'Mumbai',country:'India',latitude:19.076,longitude:72.877,sales:284000,units:176,status:'healthy'},
+    {id:'r2',city:'Bengaluru',country:'India',latitude:12.972,longitude:77.594,sales:219000,units:142,status:'healthy'},
+    {id:'r3',city:'Delhi',country:'India',latitude:28.614,longitude:77.209,sales:178000,units:93,status:'watch'},
+    {id:'r4',city:'Dubai',country:'UAE',latitude:25.205,longitude:55.271,sales:133000,units:61,status:'healthy'},
+    {id:'r5',city:'Singapore',country:'Singapore',latitude:1.352,longitude:103.82,sales:97000,units:48,status:'watch'},
+    {id:'r6',city:'London',country:'United Kingdom',latitude:51.507,longitude:-0.128,sales:76000,units:31,status:'risk'}
   ]
 };
 
 let db = load();
+let selectedRegionId='';
 const $ = id => document.getElementById(id);
 const uid = prefix => prefix + Date.now().toString(36) + Math.random().toString(36).slice(2,6);
 const escapeHtml = value => String(value ?? '').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
@@ -87,7 +96,7 @@ function importProductsFromCsv(text){
   toast(`Imported ${products.length} products.`);
 }
 
-const viewMeta={dashboard:['Dashboard','A clear view of your inventory today.'],products:['Products','Manage your product catalogue and stock levels.'],reorder:['Reorder Plan','Prioritize purchases before stock runs out.'],movements:['Stock Movements','Track every addition, sale, and adjustment.'],suppliers:['Suppliers','Manage the businesses that supply your stock.'],logbook:['Log book','A transparent timeline of everything that changed in your workspace.'],about:['About Project','An MCA academic project built with core web technologies.']};
+const viewMeta={dashboard:['Dashboard','A clear view of your inventory today.'],products:['Products','Manage your product catalogue and stock levels.'],reorder:['Reorder Plan','Prioritize purchases before stock runs out.'],movements:['Stock Movements','Track every addition, sale, and adjustment.'],suppliers:['Suppliers','Manage the businesses that supply your stock.'],analytics:['Admin insights','Company, supplier, and stock intelligence for better decisions.'],logbook:['Log book','A transparent timeline of everything that changed in your workspace.'],about:['About Project','An MCA academic project built with core web technologies.']};
 function showView(name){
   document.querySelectorAll('.view').forEach(v=>v.classList.toggle('active',v.id===`${name}View`));
   document.querySelectorAll('.nav-link').forEach(n=>n.classList.toggle('active',n.dataset.view===name));
@@ -97,8 +106,8 @@ function showView(name){
 }
 
 function renderDashboard(){
-  const units=db.products.reduce((n,p)=>n+p.quantity,0),low=db.products.filter(p=>p.quantity<=p.reorder),value=db.products.reduce((n,p)=>n+p.quantity*p.cost,0),margin=db.products.reduce((n,p)=>n+p.quantity*(p.price-p.cost),0),cats=[...new Set(db.products.map(p=>p.category))];
-  $('metricProducts').textContent=db.products.length;$('metricCategories').textContent=`${cats.length} ${cats.length===1?'category':'categories'}`;$('metricUnits').textContent=units.toLocaleString('en-IN');$('metricLow').textContent=low.length;$('metricValue').textContent=rupees.format(value);$('metricMargin').textContent=rupees.format(margin);
+  const units=db.products.reduce((n,p)=>n+p.quantity,0),low=db.products.filter(p=>p.quantity<=p.reorder),value=db.products.reduce((n,p)=>n+p.quantity*p.cost,0),margin=db.products.reduce((n,p)=>n+p.quantity*(p.price-p.cost),0),market=value+margin,cats=[...new Set(db.products.map(p=>p.category))];
+  $('metricProducts').textContent=db.products.length;$('metricCategories').textContent=`${cats.length} ${cats.length===1?'category':'categories'}`;$('metricUnits').textContent=units.toLocaleString('en-IN');$('metricLow').textContent=low.length;$('metricValue').textContent=rupees.format(value);$('metricMargin').textContent=rupees.format(margin);$('metricMarket').textContent=rupees.format(market);
   const healthy=db.products.length-low.length,reorderBudget=low.reduce((n,p)=>n+suggestedReorderQty(p)*p.cost,0),supplierCounts=db.suppliers.map(s=>[s.name,db.products.filter(p=>p.supplierId===s.id).length]).sort((a,b)=>b[1]-a[1]);
   $('stockHealth').textContent=db.products.length?`${Math.round(healthy/db.products.length*100)}%`:'0%';$('reorderBudget').textContent=rupees.format(reorderBudget);$('topSupplier').textContent=supplierCounts[0]?.[1]?supplierCounts[0][0]:'--';
   const totals=Object.entries(db.products.reduce((a,p)=>{a[p.category]=(a[p.category]||0)+p.quantity;return a},{})).sort((a,b)=>b[1]-a[1]);const max=Math.max(1,...totals.map(x=>x[1]));
@@ -106,6 +115,9 @@ function renderDashboard(){
   $('lowStockList').innerHTML=low.length?low.slice(0,5).map(p=>`<div class="alert-item"><div><strong>${escapeHtml(p.name)}</strong><small>${escapeHtml(p.sku)} - Reorder at ${p.reorder}</small></div><strong class="stock-number">${p.quantity} left</strong></div>`).join(''):'<div class="empty">Everything is well stocked.</div>';
   const recent=[...db.movements].sort((a,b)=>new Date(b.date)-new Date(a.date)).slice(0,5);
   $('recentTable').innerHTML=recent.length?recent.map(m=>movementRow(m,false)).join(''):'<tr><td colspan="5" class="empty">No stock activity yet.</td></tr>';
+  const ratio=market?Math.round(margin/market*100):0,lowRatio=db.products.length?Math.round(low.length/db.products.length*100):0;
+  $('valueComparison').innerHTML=`<div class="value-figures"><div><span>Cost value</span><strong>${rupees.format(value)}</strong></div><div><span>Market value</span><strong>${rupees.format(market)}</strong></div></div><div class="comparison-track"><span style="width:${market?value/market*100:0}%"></span></div><p><b>${rupees.format(margin)}</b> potential gross profit · ${ratio}% value uplift</p>`;
+  $('stockPulse').innerHTML=`<div class="pulse-ring" style="--pulse:${100-lowRatio}%"><strong>${100-lowRatio}%</strong><span>ready</span></div><div class="pulse-copy"><strong>${db.products.length-low.length} healthy lines</strong><span>${low.length?`${low.length} product lines need attention.`:'All product lines are above their reorder level.'}</span><button class="text-btn" data-go="analytics">Open admin insights</button></div>`;
 }
 
 function renderProducts(){
@@ -130,11 +142,33 @@ function renderMovements(){const rows=[...db.movements].sort((a,b)=>new Date(b.d
 function renderSuppliers(){
   $('supplierGrid').innerHTML=db.suppliers.length?db.suppliers.map(s=>{const count=db.products.filter(p=>p.supplierId===s.id).length;return `<article class="supplier-card"><div class="supplier-card-head"><span class="supplier-logo">${initials(s.name)}</span><div class="actions"><button class="action-btn" data-edit-supplier="${s.id}" title="Edit supplier">Edit</button><button class="action-btn" data-delete-supplier="${s.id}" title="Delete supplier">Delete</button></div></div><h3>${escapeHtml(s.name)}</h3><p class="contact">${escapeHtml(s.contact||'No contact person')}</p><div class="supplier-details"><a href="tel:${escapeHtml(s.phone)}">Phone: ${escapeHtml(s.phone||'No phone')}</a><a href="mailto:${escapeHtml(s.email)}">Email: ${escapeHtml(s.email||'No email')}</a><span>Address: ${escapeHtml(s.address||'No address')}</span></div><div class="supplier-meta">Supplies ${count} ${count===1?'product':'products'}</div></article>`}).join(''):'<div class="panel empty">No suppliers added yet.</div>';
 }
+function renderAnalytics(){
+  const products=db.products,market=products.reduce((n,p)=>n+p.quantity*p.price,0),cost=products.reduce((n,p)=>n+p.quantity*p.cost,0),margin=market-cost,low=products.filter(p=>p.quantity<=p.reorder).length;
+  $('analyticsSummary').innerHTML=[['Market value',rupees.format(market),'Estimated current selling value'],['Gross opportunity',rupees.format(margin),'Potential margin on available stock'],['Supply risk',`${low} lines`,'Products at or below reorder level'],['Suppliers',db.suppliers.length,'Active supplier and distributor records']].map(([label,value,detail])=>`<article><span>${label}</span><strong>${value}</strong><small>${detail}</small></article>`).join('');
+  const byCategory=Object.entries(products.reduce((result,p)=>{result[p.category]=(result[p.category]||0)+p.quantity*p.price;return result},{})).sort((a,b)=>b[1]-a[1]),max=Math.max(1,...byCategory.map(([,n])=>n));
+  $('categoryValueChart').innerHTML=byCategory.length?byCategory.map(([category,total])=>`<div class="insight-row"><div><strong>${escapeHtml(category)}</strong><span>${rupees.format(total)}</span></div><i><b style="width:${total/max*100}%"></b></i></div>`).join(''):'<div class="empty">Add products to view category value.</div>';
+  const stats=db.suppliers.map(s=>{const items=products.filter(p=>p.supplierId===s.id);return {name:s.name,items,units:items.reduce((n,p)=>n+p.quantity,0),cost:items.reduce((n,p)=>n+p.quantity*p.cost,0),market:items.reduce((n,p)=>n+p.quantity*p.price,0),low:items.filter(p=>p.quantity<=p.reorder).length}}).sort((a,b)=>b.market-a.market);
+  const maxSupplier=Math.max(1,...stats.map(s=>s.market));
+  $('supplierContribution').innerHTML=stats.length?stats.map((s,index)=>`<div class="supplier-bar"><span class="supplier-rank">0${index+1}</span><div><strong>${escapeHtml(s.name)}</strong><small>${s.items.length} products · ${s.low} risk lines</small><i><b style="width:${s.market/maxSupplier*100}%"></b></i></div><em>${rupees.format(s.market)}</em></div>`).join(''):'<div class="empty">Add suppliers to see contribution.</div>';
+  $('supplierPerformance').innerHTML=stats.length?stats.map(s=>`<tr><td><strong>${escapeHtml(s.name)}</strong></td><td>${s.items.length}</td><td>${s.units.toLocaleString('en-IN')}</td><td>${rupees.format(s.cost)}</td><td>${rupees.format(s.market)}</td><td><span class="badge ${s.low?'low':'good'}">${s.low||'Healthy'}</span></td></tr>`).join(''):'<tr><td colspan="6" class="empty">No supplier data yet.</td></tr>';
+  renderDistributionNetwork();
+}
+function renderDistributionNetwork(){
+  const regions=db.regions||[];
+  if(!regions.length){$('globeStage').innerHTML='<div class="empty">Add sales destinations to view the distribution network.</div>';$('regionFeed').innerHTML='';return}
+  const point=region=>({x:300+region.longitude*1.22,y:200-region.latitude*1.55}),hub=regions.find(region=>region.city==='Mumbai')||regions[0],hubPoint=point(hub),selected=regions.find(region=>region.id===selectedRegionId)||regions[0],totalSales=regions.reduce((sum,region)=>sum+region.sales,0),totalUnits=regions.reduce((sum,region)=>sum+region.units,0),risk=regions.filter(region=>region.status==='risk').length;
+  const grid=[...Array(7)].map((_,index)=>`<ellipse cx="300" cy="200" rx="${68+index*31}" ry="170"/>`).join('')+[...Array(5)].map((_,index)=>`<ellipse cx="300" cy="200" rx="245" ry="${34+index*29}"/>`).join('');
+  const routes=regions.filter(region=>region.id!==hub.id).map(region=>{const target=point(region),controlX=(hubPoint.x+target.x)/2,controlY=Math.min(hubPoint.y,target.y)-56;return `<path class="route ${region.status}" d="M ${hubPoint.x} ${hubPoint.y} Q ${controlX} ${controlY} ${target.x} ${target.y}"/>`}).join('');
+  const nodes=regions.map(region=>{const p=point(region),active=region.id===selected.id?' active':'';return `<g class="globe-node ${region.status}${active}" data-region-id="${region.id}"><circle cx="${p.x}" cy="${p.y}" r="${region.id===hub.id?8:6}"/><circle class="node-pulse" cx="${p.x}" cy="${p.y}" r="10"/><text x="${p.x+10}" y="${p.y-9}">${escapeHtml(region.city)}</text><title>${escapeHtml(region.city)}: ${rupees.format(region.sales)} sales</title></g>`}).join('');
+  $('globeStage').innerHTML=`<svg viewBox="0 0 600 400" role="img" aria-label="Global distribution globe showing sales routes"><defs><radialGradient id="sphere" cx="35%" cy="25%"><stop stop-color="#2d6387"/><stop offset=".6" stop-color="#10283f"/><stop offset="1" stop-color="#071524"/></radialGradient><filter id="glow"><feGaussianBlur stdDeviation="3" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs><circle class="globe-sphere" cx="300" cy="200" r="178"/><g class="globe-grid">${grid}</g><path class="continent" d="M214 115l38-33 47 10 25 25-19 21-42 6-22 32-40-19zM314 166l42 18 18 48-17 58-21 22-23-65 11-42zM391 121l43 9 34 35-24 22-45-14-27-24z"/><g filter="url(#glow)">${routes}${nodes}</g><text class="hub-label" x="${hubPoint.x-5}" y="${hubPoint.y+25}">FULFILMENT HUB</text></svg>`;
+  $('distributionStats').innerHTML=`<article><span>Territory sales</span><strong>${rupees.format(totalSales)}</strong></article><article><span>Units dispatched</span><strong>${totalUnits.toLocaleString('en-IN')}</strong></article><article><span>Active regions</span><strong>${regions.length}</strong></article><article class="selected-region"><span>${escapeHtml(selected.city)} status</span><strong>${selected.status==='risk'?'Needs attention':selected.status==='watch'?'Monitor closely':'On track'}</strong><small>${rupees.format(selected.sales)} · ${selected.units} units</small></article>`;
+  $('regionFeed').innerHTML=regions.map(region=>`<button class="region-item ${region.status}${region.id===selected.id?' active':''}" data-region-id="${region.id}"><span class="region-dot"></span><div><strong>${escapeHtml(region.city)}</strong><small>${escapeHtml(region.country)} · ${region.units} units</small></div><b>${rupees.format(region.sales)}</b></button>`).join('');
+}
 function fillSelects(){
   const supplierValue=$('productSupplier').value;$('productSupplier').innerHTML='<option value="">No supplier</option>'+db.suppliers.map(s=>`<option value="${s.id}" ${s.id===supplierValue?'selected':''}>${escapeHtml(s.name)}</option>`).join('');
   const productValue=$('movementProduct').value;$('movementProduct').innerHTML='<option value="">Select a product</option>'+db.products.map(p=>`<option value="${p.id}" ${p.id===productValue?'selected':''}>${escapeHtml(p.name)} (${p.quantity} units)</option>`).join('');
 }
-function renderAll(){renderDashboard();renderProducts();renderReorderPlan();renderMovements();renderSuppliers();fillSelects()}
+function renderAll(){renderDashboard();renderProducts();renderReorderPlan();renderMovements();renderSuppliers();renderAnalytics();fillSelects()}
 
 function openProduct(id=''){
   const p=productFor(id);$('productForm').reset();$('productId').value=id;$('productDialogTitle').textContent=p?'Edit product':'Add product';
@@ -157,6 +191,8 @@ document.addEventListener('click',e=>{
   if(editS)openSupplier(editS.dataset.editSupplier);if(deleteS){const id=deleteS.dataset.deleteSupplier,s=db.suppliers.find(x=>x.id===id);if(confirm(`Delete supplier ${s.name}?`)){db.suppliers=db.suppliers.filter(x=>x.id!==id);db.products.forEach(p=>{if(p.supplierId===id)p.supplierId=''});save();toast('Supplier deleted.')}}
 });
 $('quickAddBtn').onclick=$('addProductBtn').onclick=()=>openProduct();$('addMovementBtn').onclick=()=>openMovement();$('addSupplierBtn').onclick=()=>openSupplier();$('menuBtn').onclick=()=>$('sidebar').classList.toggle('open');$('productSearch').oninput=renderProducts;$('categoryFilter').onchange=renderProducts;$('stockFilter').onchange=renderProducts;
+$('dashboardDate').textContent=new Intl.DateTimeFormat('en-IN',{weekday:'long',day:'numeric',month:'long'}).format(new Date());
+$('dashboardSearchForm').addEventListener('submit',event=>{event.preventDefault();const query=$('dashboardSearch').value.trim();$('productSearch').value=query;showView('products');renderProducts();if(query)toast(`Showing products matching “${query}”.`)});
 $('resetDataBtn').onclick=()=>{if(confirm('Reset all records to the original demo data?')){db=structuredClone(seed);save();toast('Demo data restored.')}};
 $('exportBtn').onclick=()=>{const headers=['Name','SKU','Category','Quantity','Reorder Level','Cost Price','Selling Price','Inventory Value','Gross Margin','Supplier','Status'];const rows=db.products.map(p=>[p.name,p.sku,p.category,p.quantity,p.reorder,p.cost,p.price,p.quantity*p.cost,p.quantity*(p.price-p.cost),db.suppliers.find(s=>s.id===p.supplierId)?.name||'',statusFor(p)[0]]);const csv=[headers,...rows].map(r=>r.map(v=>`"${String(v).replaceAll('"','""')}"`).join(',')).join('\r\n');const blob=new Blob([csv],{type:'text/csv'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=`inventrack-inventory-${new Date().toISOString().slice(0,10)}.csv`;a.click();URL.revokeObjectURL(url);toast('Inventory exported.')};
 $('importBtn').onclick=()=>$('importFile').click();
@@ -244,3 +280,38 @@ renderEnhanced();
 showView(viewMeta[location.hash.slice(1)]?location.hash.slice(1):'dashboard');
 if(!workspace.role)$('welcomeDialog').showModal();
 loadFromServer();
+
+/* Data-aware inventory assistant. It answers from the live database without sending
+   company data to a third-party AI service. */
+function assistantReply(question){
+  const text=question.toLowerCase(),products=db.products,low=products.filter(p=>p.quantity<=p.reorder),cost=products.reduce((n,p)=>n+p.quantity*p.cost,0),market=products.reduce((n,p)=>n+p.quantity*p.price,0),margin=market-cost;
+  const suppliers=db.suppliers.map(s=>({name:s.name,items:products.filter(p=>p.supplierId===s.id)})).map(s=>({...s,value:s.items.reduce((n,p)=>n+p.quantity*p.price,0)})).sort((a,b)=>b.value-a.value);
+  if(/hello|hi |welcome/.test(text))return `Hello! I can help you review ${products.length} products, stock risk, values, and supplier performance.`;
+  if(/reorder|low.stock|risk|shortage/.test(text))return low.length?`${low.length} product line${low.length===1?' is':'s are'} at or below reorder level: ${low.map(p=>`${p.name} (${p.quantity} left)`).join(', ')}. The estimated reorder budget is ${rupees.format(low.reduce((n,p)=>n+suggestedReorderQty(p)*p.cost,0))}.`:'Great news: every product is currently above its reorder level.';
+  if(/market|selling|revenue/.test(text))return `Your available inventory has an estimated market value of ${rupees.format(market)}. This is based on current selling prices, not completed sales.`;
+  if(/profit|margin|gross/.test(text))return `The potential gross margin on current stock is ${rupees.format(margin)} (${market?Math.round(margin/market*100):0}% of market value).`;
+  if(/supplier|distributor|vendor/.test(text)){const top=suppliers[0];return top?`${top.name} currently has the largest catalogue contribution at ${rupees.format(top.value)} across ${top.items.length} product line${top.items.length===1?'':'s'}.`:'No supplier records are available yet.'}
+  if(/value|worth|cost/.test(text))return `Current inventory cost value is ${rupees.format(cost)} and its estimated market value is ${rupees.format(market)}.`;
+  if(/stock|product|unit/.test(text))return `You have ${products.reduce((n,p)=>n+p.quantity,0).toLocaleString('en-IN')} units across ${products.length} products. ${low.length?`${low.length} product lines need attention.`:'Stock health is good.'}`;
+  return 'Try asking about reorder risks, stock value, market value, gross margin, or your top supplier.';
+}
+function addAssistantMessage(message,from='assistant'){
+  const messages=$('assistantMessages');
+  messages.insertAdjacentHTML('beforeend',`<div class="assistant-message ${from}">${escapeHtml(message)}</div>`);
+  messages.scrollTop=messages.scrollHeight;
+}
+function openAssistant(){
+  const panel=$('assistantPanel');panel.hidden=false;panel.classList.add('open');
+  if(!$('assistantMessages').children.length)addAssistantMessage('Welcome back. Ask me about today’s stock, inventory value, supplier performance, or reorder risks.');
+  setTimeout(()=>$('assistantInput').focus(),80);
+}
+function askAssistant(question){
+  const prompt=question.trim();if(!prompt)return;
+  addAssistantMessage(prompt,'user');
+  setTimeout(()=>addAssistantMessage(assistantReply(prompt)),180);
+}
+$('assistantToggle').onclick=openAssistant;
+$('assistantClose').onclick=()=>{$('assistantPanel').classList.remove('open');$('assistantPanel').hidden=true};
+$('assistantForm').addEventListener('submit',event=>{event.preventDefault();askAssistant($('assistantInput').value);$('assistantInput').value=''});
+document.addEventListener('click',event=>{const suggestion=event.target.closest('[data-assistant-question]');if(suggestion)askAssistant(suggestion.dataset.assistantQuestion)});
+document.addEventListener('click',event=>{const region=event.target.closest('[data-region-id]');if(region){selectedRegionId=region.dataset.regionId;renderDistributionNetwork();}});

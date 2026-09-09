@@ -28,6 +28,14 @@ const seed = {
     { id: 'm2', productId: 'p3', type: 'out', quantity: 6, balance: 64, reference: 'SALE-218', notes: 'Customer order', date: '2026-08-19T14:10:00' },
     { id: 'm3', productId: 'p4', type: 'out', quantity: 2, balance: 4, reference: 'SALE-215', notes: 'Corporate order', date: '2026-08-18T11:20:00' },
     { id: 'm4', productId: 'p5', type: 'in', quantity: 24, balance: 42, reference: 'PO-1039', notes: 'Supplier delivery', date: '2026-08-17T16:00:00' }
+  ],
+  regions: [
+    { id: 'r1', city: 'Mumbai', country: 'India', latitude: 19.076, longitude: 72.877, sales: 284000, units: 176, status: 'healthy' },
+    { id: 'r2', city: 'Bengaluru', country: 'India', latitude: 12.972, longitude: 77.594, sales: 219000, units: 142, status: 'healthy' },
+    { id: 'r3', city: 'Delhi', country: 'India', latitude: 28.614, longitude: 77.209, sales: 178000, units: 93, status: 'watch' },
+    { id: 'r4', city: 'Dubai', country: 'UAE', latitude: 25.205, longitude: 55.271, sales: 133000, units: 61, status: 'healthy' },
+    { id: 'r5', city: 'Singapore', country: 'Singapore', latitude: 1.352, longitude: 103.82, sales: 97000, units: 48, status: 'watch' },
+    { id: 'r6', city: 'London', country: 'United Kingdom', latitude: 51.507, longitude: -0.128, sales: 76000, units: 31, status: 'risk' }
   ]
 };
 
@@ -35,13 +43,15 @@ const db = new DatabaseSync(DB_PATH);
 db.exec(`PRAGMA foreign_keys = ON;
   CREATE TABLE IF NOT EXISTS suppliers (id TEXT PRIMARY KEY, name TEXT NOT NULL, contact TEXT, phone TEXT, email TEXT, address TEXT);
   CREATE TABLE IF NOT EXISTS products (id TEXT PRIMARY KEY, name TEXT NOT NULL, sku TEXT NOT NULL COLLATE NOCASE UNIQUE, category TEXT NOT NULL, quantity INTEGER NOT NULL CHECK(quantity >= 0), reorder_level INTEGER NOT NULL CHECK(reorder_level >= 0), cost REAL NOT NULL CHECK(cost >= 0), price REAL NOT NULL CHECK(price >= 0), supplier_id TEXT REFERENCES suppliers(id) ON DELETE SET NULL);
-  CREATE TABLE IF NOT EXISTS movements (id TEXT PRIMARY KEY, product_id TEXT NOT NULL, type TEXT NOT NULL CHECK(type IN ('in', 'out', 'adjustment')), quantity INTEGER NOT NULL CHECK(quantity >= 0), balance INTEGER NOT NULL CHECK(balance >= 0), reference TEXT, notes TEXT, date TEXT NOT NULL);`);
+  CREATE TABLE IF NOT EXISTS movements (id TEXT PRIMARY KEY, product_id TEXT NOT NULL, type TEXT NOT NULL CHECK(type IN ('in', 'out', 'adjustment')), quantity INTEGER NOT NULL CHECK(quantity >= 0), balance INTEGER NOT NULL CHECK(balance >= 0), reference TEXT, notes TEXT, date TEXT NOT NULL);
+  CREATE TABLE IF NOT EXISTS sales_regions (id TEXT PRIMARY KEY, city TEXT NOT NULL, country TEXT NOT NULL, latitude REAL NOT NULL, longitude REAL NOT NULL, sales REAL NOT NULL CHECK(sales >= 0), units INTEGER NOT NULL CHECK(units >= 0), status TEXT NOT NULL CHECK(status IN ('healthy', 'watch', 'risk')));`);
 
 function rows() {
   return {
     suppliers: db.prepare('SELECT id, name, contact, phone, email, address FROM suppliers ORDER BY name').all(),
     products: db.prepare('SELECT id, name, sku, category, quantity, reorder_level AS reorder, cost, price, COALESCE(supplier_id, \'\') AS supplierId FROM products ORDER BY rowid DESC').all(),
-    movements: db.prepare('SELECT id, product_id AS productId, type, quantity, balance, reference, notes, date FROM movements ORDER BY date DESC').all()
+    movements: db.prepare('SELECT id, product_id AS productId, type, quantity, balance, reference, notes, date FROM movements ORDER BY date DESC').all(),
+    regions: db.prepare('SELECT id, city, country, latitude, longitude, sales, units, status FROM sales_regions ORDER BY sales DESC').all()
   };
 }
 function replaceInventory(payload) {
@@ -49,16 +59,22 @@ function replaceInventory(payload) {
   const insertSupplier = db.prepare('INSERT INTO suppliers VALUES (?, ?, ?, ?, ?, ?)');
   const insertProduct = db.prepare('INSERT INTO products VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)');
   const insertMovement = db.prepare('INSERT INTO movements VALUES (?, ?, ?, ?, ?, ?, ?, ?)');
+  const insertRegion = db.prepare('INSERT INTO sales_regions VALUES (?, ?, ?, ?, ?, ?, ?, ?)');
   db.exec('BEGIN');
   try {
-    db.exec('DELETE FROM movements; DELETE FROM products; DELETE FROM suppliers;');
+    db.exec('DELETE FROM movements; DELETE FROM products; DELETE FROM suppliers; DELETE FROM sales_regions;');
     for (const s of payload.suppliers) insertSupplier.run(s.id, s.name, s.contact || '', s.phone || '', s.email || '', s.address || '');
     for (const p of payload.products) insertProduct.run(p.id, p.name, p.sku, p.category, p.quantity, p.reorder, p.cost, p.price, p.supplierId || null);
     for (const m of payload.movements) insertMovement.run(m.id, m.productId, m.type, m.quantity, m.balance, m.reference || '', m.notes || '', m.date);
+    for (const region of (payload.regions || [])) insertRegion.run(region.id, region.city, region.country, region.latitude, region.longitude, region.sales, region.units, region.status);
     db.exec('COMMIT');
   } catch (error) { db.exec('ROLLBACK'); throw error; }
 }
 if (!db.prepare('SELECT 1 FROM products LIMIT 1').get()) replaceInventory(seed);
+if (!db.prepare('SELECT 1 FROM sales_regions LIMIT 1').get()) {
+  const insertRegion = db.prepare('INSERT INTO sales_regions VALUES (?, ?, ?, ?, ?, ?, ?, ?)');
+  for (const region of seed.regions) insertRegion.run(region.id, region.city, region.country, region.latitude, region.longitude, region.sales, region.units, region.status);
+}
 
 function send(res, code, body, type = 'application/json') { res.writeHead(code, { 'Content-Type': `${type}; charset=utf-8` }); res.end(type === 'application/json' ? JSON.stringify(body) : body); }
 function body(req) { return new Promise((resolve, reject) => { let raw = ''; req.on('data', chunk => { raw += chunk; if (raw.length > 1_000_000) reject(new Error('Request body is too large.')); }); req.on('end', () => { try { resolve(JSON.parse(raw || '{}')); } catch { reject(new Error('Invalid JSON.')); } }); }); }

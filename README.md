@@ -34,7 +34,7 @@
 | **Programme** | Master of Computer Applications (MCA) |
 | **Course Component** | Academic Mini Project |
 | **Domain** | Inventory Management & Enterprise Information Systems |
-| **Version** | `2.0.0` (Backend & SQLite Release) |
+| **Version** | `2.1.0` (Executive Intelligence Release) |
 | **Academic Year** | 2026 |
 | **Persistence** | SQLite core database with `localStorage` used only as an offline browser backup and workspace preference store |
 | **Target Platforms** | Modern Chromium, Gecko, and WebKit Browsers (Desktop, Tablet, Mobile) |
@@ -223,6 +223,13 @@ Initial Prototype      Workflow Overhaul      CSV Import & Tooling      Workspac
 * Preserved `localStorage` as an offline fallback and retained the existing role, theme, and activity-log preferences.
 * Added `package.json` scripts and documented the Node.js startup workflow. The generated database is excluded from Git via `.gitignore`.
 
+#### Milestone 6: Executive Intelligence & UI Refresh (September 09, 2026)
+* Redesigned the interface with a more professional executive-dashboard visual system, refined dark mode, responsive layouts, and reduced-motion support.
+* Added live cost value, market value, gross-margin, and stock-readiness visuals to the dashboard.
+* Created the **Admin insights** control center with category value bars, supplier/distributor contribution analysis, and a supplier performance table.
+* Added an upgraded welcome screen that introduces the management workspace and role selection experience.
+* Added the **InvenTrack Assistant**, a data-aware inventory chatbot that answers questions about stock, reorder risks, values, margins, and supplier performance from the live database. It does not transmit inventory data to a third-party AI service.
+
 ---
 
 ## Validation & Business Logic
@@ -258,6 +265,9 @@ For development with automatic server restart:
 ```bash
 node --watch server.js
 ```
+
+### Visual Studio Code Debugging
+Choose **Launch InvenTrack Server** in the Run and Debug panel, then press **F5**. Do not use the Python debugger for `app.js`: it is a JavaScript browser file, not a Python program. The server starts on port 3000 and VS Code opens the application automatically.
 
 ---
 

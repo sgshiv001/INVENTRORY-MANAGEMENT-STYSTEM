@@ -22,6 +22,7 @@
         <button class="nav-link" data-view="reorder"><span class="nav-icon">R</span> Reorder Plan</button>
         <button class="nav-link" data-view="movements"><span class="nav-icon">M</span> Stock Movements</button>
         <button class="nav-link" data-view="suppliers"><span class="nav-icon">S</span> Suppliers</button>
+        <button class="nav-link" data-view="analytics"><span class="nav-icon">A</span> Admin insights</button>
         <button class="nav-link" data-view="logbook"><span class="nav-icon">L</span> Log book</button>
         <button class="nav-link" data-view="about"><span class="nav-icon">i</span> About Project</button>
       </nav>
@@ -51,12 +52,28 @@
       </header>
 
       <section class="view active" id="dashboardView">
+        <section class="dashboard-welcome">
+          <div class="welcome-topline"><span>HOME</span><span id="dashboardDate">Today</span></div>
+          <h2>What would you like to manage?</h2>
+          <p>Search your catalogue, open an operational module, or review the latest company performance.</p>
+          <form class="dashboard-search" id="dashboardSearchForm"><input id="dashboardSearch" type="search" placeholder="Search products, SKUs, or categories..." aria-label="Search inventory"><button class="btn primary">Search inventory</button></form>
+        </section>
+
+        <section class="module-grid" aria-label="Quick management modules">
+          <button class="module-card" data-go="products"><span class="module-icon products">P</span><strong>Products</strong><small>Manage catalogue</small></button>
+          <button class="module-card" data-go="suppliers"><span class="module-icon suppliers">S</span><strong>Suppliers</strong><small>Manage partners</small></button>
+          <button class="module-card" data-go="movements"><span class="module-icon movements">M</span><strong>Movements</strong><small>Track stock flow</small></button>
+          <button class="module-card" data-go="reorder"><span class="module-icon reorder">R</span><strong>Reorder plan</strong><small>Plan procurement</small></button>
+          <button class="module-card" data-go="analytics"><span class="module-icon analytics">A</span><strong>Analytics</strong><small>Company insights</small></button>
+          <button class="module-card" data-go="logbook"><span class="module-icon reports">L</span><strong>Activity log</strong><small>Review audit trail</small></button>
+        </section>
         <div class="metric-grid">
           <article class="metric-card blue"><div class="metric-icon">P</div><div><span>Total products</span><strong id="metricProducts">0</strong><small id="metricCategories">0 categories</small></div></article>
           <article class="metric-card green"><div class="metric-icon">U</div><div><span>Units in stock</span><strong id="metricUnits">0</strong><small>Across all products</small></div></article>
           <article class="metric-card amber"><div class="metric-icon">!</div><div><span>Low stock</span><strong id="metricLow">0</strong><small>Needs attention</small></div></article>
           <article class="metric-card violet"><div class="metric-icon">&#8377;</div><div><span>Inventory value</span><strong id="metricValue">&#8377;0</strong><small>At cost price</small></div></article>
           <article class="metric-card teal"><div class="metric-icon">M</div><div><span>Gross margin</span><strong id="metricMargin">&#8377;0</strong><small>Potential stock profit</small></div></article>
+          <article class="metric-card market"><div class="metric-icon">&#8599;</div><div><span>Market value</span><strong id="metricMarket">&#8377;0</strong><small>At selling price</small></div></article>
         </div>
 
         <div class="dashboard-grid">
@@ -74,6 +91,17 @@
           <article><span>Stock health</span><strong id="stockHealth">0%</strong><small>Products above reorder level</small></article>
           <article><span>Reorder budget</span><strong id="reorderBudget">&#8377;0</strong><small>Suggested spend at cost</small></article>
           <article><span>Top supplier</span><strong id="topSupplier">--</strong><small>By linked products</small></article>
+        </div>
+
+        <div class="executive-grid">
+          <article class="panel value-panel">
+            <div class="panel-head"><div><span class="eyebrow">FINANCIAL POSITION</span><h2>Inventory value outlook</h2><p>Cost investment compared with potential market value.</p></div></div>
+            <div id="valueComparison" class="value-comparison"></div>
+          </article>
+          <article class="panel pulse-panel">
+            <div class="panel-head"><div><span class="eyebrow">OPERATIONS PULSE</span><h2>Stock readiness</h2><p>Live availability across the catalogue.</p></div></div>
+            <div id="stockPulse" class="stock-pulse"></div>
+          </article>
         </div>
 
         <article class="panel">
@@ -119,6 +147,28 @@
         <div class="supplier-grid" id="supplierGrid"></div>
       </section>
 
+      <section class="view" id="analyticsView">
+        <div class="analytics-hero">
+          <div><span class="eyebrow">ADMIN CONTROL CENTER</span><h2>Company performance, at a glance.</h2><p>Review the financial position, category allocation, supplier contribution, and inventory risk from one management view.</p></div>
+          <button class="btn primary" data-go="reorder">Review reorder plan</button>
+        </div>
+        <div class="analytics-summary" id="analyticsSummary"></div>
+        <section class="distribution-command">
+          <aside class="distribution-stats">
+            <span class="eyebrow">DISTRIBUTION INTELLIGENCE</span><h3>Sales territory network</h3><p>Demo sales regions connected to the primary India fulfilment hub.</p>
+            <div id="distributionStats"></div>
+            <span class="data-note">DEMO TERRITORY DATA · READY FOR LIVE SALES DESTINATIONS</span>
+          </aside>
+          <div class="globe-stage" id="globeStage" aria-label="Global sales and distribution network"></div>
+          <aside class="region-feed"><div class="panel-head"><div><h2>Sales regions</h2><p>Current territory performance</p></div></div><div id="regionFeed"></div></aside>
+        </section>
+        <div class="analytics-grid">
+          <article class="panel"><div class="panel-head"><div><h2>Value by category</h2><p>Market value held in each product group</p></div></div><div id="categoryValueChart" class="insight-chart"></div></article>
+          <article class="panel"><div class="panel-head"><div><h2>Supplier contribution</h2><p>Products and inventory value by supplier</p></div></div><div id="supplierContribution" class="supplier-contribution"></div></article>
+        </div>
+        <article class="panel table-panel"><div class="panel-head"><div><h2>Supplier & distributor performance</h2><p>Use this view to focus procurement conversations and reduce supply risk.</p></div></div><div class="table-wrap"><table><thead><tr><th>Supplier / distributor</th><th>Products</th><th>Units held</th><th>Cost value</th><th>Market value</th><th>Low-stock lines</th></tr></thead><tbody id="supplierPerformance"></tbody></table></div></article>
+      </section>
+
       <section class="view" id="logbookView">
         <div class="logbook-hero">
           <div><span class="eyebrow">AUDIT TRAIL</span><h2>Every decision, in one place.</h2><p>Review stock changes, catalogue updates, and workspace events with a clear operational timeline.</p></div>
@@ -137,10 +187,10 @@
             <h2>Inventory control made simple, clear, and practical.</h2>
             <p>InvenTrack demonstrates how a browser-based information system can organize product records, monitor stock, manage suppliers, and maintain an auditable history of inventory changes.</p>
             <div class="tech-pills" aria-label="Technologies used">
-              <span>HTML5</span><span>CSS3</span><span>JavaScript</span><span>Local Storage</span>
+              <span>HTML5</span><span>CSS3</span><span>JavaScript</span><span>Node.js</span><span>SQLite</span>
             </div>
           </div>
-          <div class="project-mark" aria-hidden="true"><strong>IT</strong><span>v1.0</span></div>
+          <div class="project-mark" aria-hidden="true"><strong>IT</strong><span>v2.0</span></div>
         </article>
 
         <div class="project-grid">
@@ -231,7 +281,8 @@
   <dialog id="welcomeDialog" class="welcome-dialog">
     <form method="dialog" id="welcomeForm">
       <div class="welcome-kicker">WELCOME TO INVENTRACK</div>
-      <div class="dialog-head"><div><h2>Set up your workspace</h2><p>Choose the role that best matches how you manage inventory.</p></div></div>
+      <div class="dialog-head"><div><h2>Your command center is ready.</h2><p>Choose the perspective that best matches how you manage inventory. You can switch this at any time.</p></div></div>
+      <div class="welcome-preview"><span>LIVE OPERATIONS</span><strong>Stock, supplier and value intelligence in one workspace.</strong></div>
       <div class="role-options">
         <button type="button" class="role-option" data-role="retailer"><strong>Retailer</strong><span>Track daily sales, stock levels, and fast-moving products.</span></button>
         <button type="button" class="role-option" data-role="wholesaler"><strong>Wholesaler</strong><span>Coordinate suppliers, bulk orders, and replenishment planning.</span></button>
@@ -240,6 +291,14 @@
       <div class="dialog-actions"><button class="btn secondary" type="button" id="skipWelcomeBtn">Use default admin</button></div>
     </form>
   </dialog>
+
+  <button class="assistant-fab" id="assistantToggle" aria-label="Open inventory assistant"><span>AI</span><b>Ask InvenTrack</b></button>
+  <section class="assistant-panel" id="assistantPanel" aria-label="InvenTrack inventory assistant" hidden>
+    <div class="assistant-head"><div><span class="assistant-orb">AI</span><div><strong>InvenTrack Assistant</strong><small>Live inventory intelligence</small></div></div><button class="close-btn" id="assistantClose" aria-label="Close assistant">&times;</button></div>
+    <div class="assistant-messages" id="assistantMessages" aria-live="polite"></div>
+    <div class="assistant-suggestions"><button data-assistant-question="What needs reordering?">Reorder risks</button><button data-assistant-question="Show stock value">Stock value</button><button data-assistant-question="Which supplier has the most value?">Top supplier</button></div>
+    <form class="assistant-form" id="assistantForm"><input id="assistantInput" maxlength="180" placeholder="Ask about stock, value, or suppliers..." autocomplete="off"><button class="btn primary">Send</button></form>
+  </section>
 
   <div class="toast" id="toast" role="status"></div>
   <script src="app.js"></script>
