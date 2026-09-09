@@ -2,11 +2,11 @@
 
 [![Academic Project](https://img.shields.io/badge/Project-MCA%20Academic%20Mini%20Project-blue.svg)](#project-specification)
 [![Academic Year](https://img.shields.io/badge/Academic%20Year-2026-brightgreen.svg)](#project-specification)
-[![Architecture](https://img.shields.io/badge/Architecture-Client--Side%20SPA%20(No%20Server)-orange.svg)](#system-architecture--core-modules)
-[![Technology](https://img.shields.io/badge/Stack-HTML5%20%7C%20CSS3%20%7C%20ES6%2B%20%7C%20Python3-darkblue.svg)](#system-architecture--core-modules)
+[![Architecture](https://img.shields.io/badge/Architecture-Full--Stack%20SPA-orange.svg)](#system-architecture--core-modules)
+[![Technology](https://img.shields.io/badge/Stack-HTML5%20%7C%20CSS3%20%7C%20Node.js%20%7C%20SQLite-darkblue.svg)](#system-architecture--core-modules)
 [![Theme Support](https://img.shields.io/badge/Theme-Light%20%26%20Dark%20Mode-violet.svg)](#key-features--capabilities)
 
-**InvenTrack** is a modern, responsive, serverless inventory management and operational intelligence web application developed as an MCA academic mini project. It demonstrates how core web technologies (semantic HTML5, modern CSS3, and modular ES6+ JavaScript) paired with browser storage APIs can deliver a reliable, real-time business application with zero external frameworks, backend servers, or database installations.
+**InvenTrack** is a modern, responsive full-stack inventory management and operational intelligence web application developed as an MCA academic mini project. Its browser interface is served by a Node.js API, which persists products, suppliers, and stock movements in a SQLite database.
 
 ---
 
@@ -34,9 +34,9 @@
 | **Programme** | Master of Computer Applications (MCA) |
 | **Course Component** | Academic Mini Project |
 | **Domain** | Inventory Management & Enterprise Information Systems |
-| **Version** | `1.1.0` (Workspace Redesign Release) |
+| **Version** | `2.0.0` (Backend & SQLite Release) |
 | **Academic Year** | 2026 |
-| **Client Storage Key** | `inventrack_mca_v1` (Core DB), `inventrack_workspace_v1` (Preferences & Audit Log) |
+| **Persistence** | SQLite core database with `localStorage` used only as an offline browser backup and workspace preference store |
 | **Target Platforms** | Modern Chromium, Gecko, and WebKit Browsers (Desktop, Tablet, Mobile) |
 
 ---
@@ -62,7 +62,7 @@ Traditional small-to-medium inventory management frequently relies on manual pap
 
 ## System Architecture & Core Modules
 
-InvenTrack is engineered as a **Serverless Single-Page Application (SPA)** that executes entirely in the client runtime without third-party runtime dependencies.
+InvenTrack is a **full-stack Single-Page Application (SPA)**. Node.js serves the browser client and a JSON API; SQLite persists the shared inventory catalogue, suppliers, and movement ledger.
 
 ```text
 +-------------------------------------------------------------------------+
@@ -79,9 +79,9 @@ InvenTrack is engineered as a **Serverless Single-Page Application (SPA)** that 
 +------------------------------------+------------------------------------+
                                      |
 +------------------------------------+------------------------------------+
-|                         Persistence Layer (Web Storage)                 |
-|  - `inventrack_mca_v1`             - `inventrack_workspace_v1`          |
-|    (Suppliers, Products, Ledger)      (Theme, Role Profile, Audit Log)  |
+|                      API & Persistence Layer (Node.js + SQLite)         |
+|  - `/api/inventory`                - `data/inventrack.db`               |
+|    (Suppliers, Products, Ledger)      (SQLite relational database)       |
 +-------------------------------------------------------------------------+
 ```
 
@@ -134,10 +134,11 @@ The data layer models an operational supply chain using normalized entity relati
 
 ### Storage Schema Definitions
 
-#### 1. Core Database (`localStorage['inventrack_mca_v1']`)
-* **`suppliers`**: `Array<{ id: string, name: string, contact: string, phone: string, email: string, address: string }>`
-* **`products`**: `Array<{ id: string, name: string, sku: string, category: string, quantity: number, reorder: number, cost: number, price: number, supplierId: string }>`
-* **`movements`**: `Array<{ id: string, productId: string, type: 'in'|'out'|'adjustment', quantity: number, balance: number, reference: string, notes: string, date: string }>`
+#### 1. Core Database (`data/inventrack.db`)
+* **`suppliers`**: SQLite supplier table with the supplier contact fields.
+* **`products`**: SQLite product table with a case-insensitive unique SKU and optional supplier foreign key.
+* **`movements`**: SQLite movement ledger table storing stock-in, stock-out, and adjustments.
+* **API**: `GET /api/inventory` loads the three collections; `PUT /api/inventory` saves them atomically in a SQLite transaction.
 
 #### 2. Workspace Database (`localStorage['inventrack_workspace_v1']`)
 * **`role`**: `'retailer' | 'wholesaler' | 'admin'`
@@ -164,15 +165,15 @@ The data layer models an operational supply chain using normalized entity relati
 This project was developed incrementally through continuous feature additions, performance refinements, and code quality audits:
 
 ```text
-2026-08-20                     2026-08-25                   2026-09-03                      2026-09-07
+2026-08-20          2026-08-25          2026-09-03          2026-09-07          2026-09-09
     |                              |                            |                               |
     *------------------------------*----------------------------*-------------------------------*
-Initial Prototype             Workflow Overhaul             CSV Import & Tooling            Workspace Redesign
-- Core SPA structure          - Rebuilt stock ledger        - RFC 4180 CSV parser           - Role-based onboarding
-- Products & Suppliers        - Python reporting utility    - launch.json debug config      - Audit Log book view
-- Basic CSS layout            - Valuation & margin logic    - Safe CSV opening stock        - Dark / Light mode engine
-- Initial seed data           - Supplier relation guards    - Academic documentation fixes  - Notification center
-                                                                                            - Reactivity & contrast fixes
+Initial Prototype      Workflow Overhaul      CSV Import & Tooling      Workspace Redesign      Backend & Database
+- Core SPA structure     - Rebuilt stock ledger     - RFC 4180 CSV parser      - Role-based onboarding    - Node.js HTTP API
+- Products & Suppliers   - Python reporting utility - launch.json debug config - Audit Log book view      - SQLite database schema
+- Basic CSS layout       - Valuation & margin logic - Safe CSV opening stock   - Dark / Light mode engine - API synchronization
+- Initial seed data      - Supplier relation guards - Documentation polish     - Notification center      - Backend documentation
+                                                                         - Reactivity & contrast fixes
 ```
 
 ### Detailed Evolution Timeline
@@ -214,6 +215,14 @@ Initial Prototype             Workflow Overhaul             CSV Import & Tooling
   * Synchronized notification counters and logbook rendering dynamically upon every `save()` execution.
   * Resolved hash routing initialization to guarantee direct deep-linking to `#logbook`.
 
+#### Milestone 5: Backend & SQLite Database Integration (September 09, 2026)
+* Replaced browser-only core persistence with a Node.js HTTP server and SQLite relational database.
+* Created `server.js`, which serves the application, initializes the database schema, seeds the first-run demo data, and provides the inventory API.
+* Added SQLite tables for suppliers, products, and movements with unique SKU, non-negative stock, and supplier foreign-key constraints.
+* Connected `app.js` to `GET /api/inventory` and `PUT /api/inventory`, so inventory mutations are written to the database.
+* Preserved `localStorage` as an offline fallback and retained the existing role, theme, and activity-log preferences.
+* Added `package.json` scripts and documented the Node.js startup workflow. The generated database is excluded from Git via `.gitignore`.
+
 ---
 
 ## Validation & Business Logic
@@ -234,22 +243,21 @@ The system enforces strict business and validation constraints to maintain opera
 
 ## Local Execution & Debugging
 
-InvenTrack requires **no web server, database, or package installation**. It runs directly in any modern browser.
+InvenTrack includes its own Node.js server and SQLite database. It uses built-in Node modules, so there is no `npm install` step.
 
-### Option 1: Direct Browser Launch
+### Run the Full Application
 1. Clone or download this repository.
-2. Double-click [`index.html`](index.html) to open it in Google Chrome, Microsoft Edge, Mozilla Firefox, or Apple Safari.
-
-### Option 2: Local Python HTTP Server
-To run under a local HTTP origin (e.g., testing port 8080):
+2. Ensure Node.js **22.5 or newer** is installed.
+3. Start the server from the repository root:
 ```bash
-# Run from repository root
-python -m http.server 8080
+node server.js
 ```
-Navigate to: **`http://localhost:8080`**
+4. Open **`http://localhost:3000`**. The first startup creates and seeds `data/inventrack.db`.
 
-### Option 3: Visual Studio Code Debugger
-Open the project directory in VS Code and press **F5** (or select **Run and Debug** > **Open InvenTrack in Chrome**).
+For development with automatic server restart:
+```bash
+node --watch server.js
+```
 
 ---
 
@@ -287,7 +295,9 @@ INVENTORY MANAGEMENT SYSTEM/
 ├── .gitattributes             # Git line-ending and diff attributes
 ├── app.js                     # Core application logic, routing, persistence & UI handlers
 ├── index.html                 # Semantic application layouts, views, and modal dialogs
+├── package.json               # Node.js start and development scripts
 ├── README.md                  # Comprehensive project documentation
+├── server.js                  # Node.js API, static server, and SQLite schema
 └── styles.css                 # Responsive layout, color system, and dark mode theme
 ```
 
@@ -315,12 +325,12 @@ The following matrix outlines test cases to verify application behavior:
 ## Limitations & Future Roadmap
 
 ### Current Scope & Limitations
-* **Local Storage Scope:** Data is persisted in the local browser instance (`localStorage`) and does not synchronize across separate devices.
+* **Local Deployment Scope:** The SQLite database is local to the computer running `server.js`; deploying it for multiple users requires hosting the Node.js server and securing it with authentication.
 * **Single-Tenant Execution:** Authentication is simulation/role-preference based; it does not feature encrypted passwords or session tokens.
 * **Dataset Scale:** Designed for small-to-medium business catalogues and classroom presentations.
 
 ### Future Development Roadmap
-* [ ] **Cloud Backend Integration:** Node.js/Express or FastAPI REST backend with PostgreSQL/MongoDB.
+* [ ] **Cloud Deployment:** Deploy the Node.js API and migrate SQLite to PostgreSQL or MongoDB for multi-user access.
 * [ ] **Authentication & Access Control:** JWT-based login with multi-user permissions (Sales Associate, Stock Auditor, System Administrator).
 * [ ] **Barcode & QR Code Scanner:** WebRTC camera integration for rapid barcode product scanning.
 * [ ] **Procurement & Invoicing Workflows:** PDF invoice generation for customer sales and supplier purchase orders.

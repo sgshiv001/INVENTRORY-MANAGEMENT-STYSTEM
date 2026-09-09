@@ -37,7 +37,26 @@ function load(){
   }catch{}
   localStorage.setItem(STORE_KEY,JSON.stringify(seed));return structuredClone(seed);
 }
-function save(){localStorage.setItem(STORE_KEY,JSON.stringify(db));renderAll();}
+async function save(){
+  localStorage.setItem(STORE_KEY,JSON.stringify(db));
+  renderAll();
+  try{
+    const response=await fetch('/api/inventory',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(db)});
+    if(!response.ok)throw new Error((await response.json()).error||'Database update failed.');
+    db=await response.json();
+    localStorage.setItem(STORE_KEY,JSON.stringify(db));
+    renderAll();
+  }catch(error){console.error('Database sync failed:',error);toast('Saved locally. Start the backend to sync the database.');}
+}
+async function loadFromServer(){
+  try{
+    const response=await fetch('/api/inventory');
+    if(!response.ok)throw new Error('Could not load inventory.');
+    db=await response.json();
+    localStorage.setItem(STORE_KEY,JSON.stringify(db));
+    renderAll();renderEnhanced();
+  }catch(error){console.warn('Using browser backup because the API is unavailable.',error);}
+}
 function toast(message){const el=$('toast');el.textContent=message;el.classList.add('show');clearTimeout(toast.timer);toast.timer=setTimeout(()=>el.classList.remove('show'),2400)}
 function initials(name){return name.split(/\s+/).slice(0,2).map(x=>x[0]).join('').toUpperCase()}
 function productFor(id){return db.products.find(p=>p.id===id)}
@@ -224,3 +243,4 @@ ensureNotificationPanel();
 renderEnhanced();
 showView(viewMeta[location.hash.slice(1)]?location.hash.slice(1):'dashboard');
 if(!workspace.role)$('welcomeDialog').showModal();
+loadFromServer();
