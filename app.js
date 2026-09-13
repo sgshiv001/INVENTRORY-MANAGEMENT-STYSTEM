@@ -35,6 +35,8 @@ const seed = {
 
 let db = load();
 let selectedRegionId='';
+let databaseReady=false, saveQueue=Promise.resolve(), releases=[];
+function connection(message,state){const el=document.getElementById('connectionStatus');el.textContent=message;el.dataset.state=state;}
 const $ = id => document.getElementById(id);
 const uid = prefix => prefix + Date.now().toString(36) + Math.random().toString(36).slice(2,6);
 const escapeHtml = value => String(value ?? '').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
@@ -46,26 +48,37 @@ function load(){
   }catch{}
   localStorage.setItem(STORE_KEY,JSON.stringify(seed));return structuredClone(seed);
 }
-async function save(){
-  localStorage.setItem(STORE_KEY,JSON.stringify(db));
-  renderAll();
-  try{
-    const response=await fetch('/api/inventory',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(db)});
+function save(){
+  const snapshot=structuredClone(db);
+  localStorage.setItem(STORE_KEY,JSON.stringify(snapshot));renderAll();
+  connection('Saving changes…','pending');
+  saveQueue=saveQueue.then(async()=>{
+    if(!databaseReady)throw new Error('Database unavailable. Export your changes before reloading.');
+    snapshot.revision=db.revision;
+    const response=await fetch('/api/inventory',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(snapshot),signal:AbortSignal.timeout(10000)});
     if(!response.ok)throw new Error((await response.json()).error||'Database update failed.');
-    db=await response.json();
-    localStorage.setItem(STORE_KEY,JSON.stringify(db));
-    renderAll();
-  }catch(error){console.error('Database sync failed:',error);toast('Saved locally. Start the backend to sync the database.');}
+    const saved=await response.json();db.revision=saved.revision;
+    localStorage.setItem(STORE_KEY,JSON.stringify(db));connection('Database synced','ready');
+    logActivity('Database save confirmed','Inventory changes were committed to SQLite.');renderLogbook();
+  }).catch(error=>{databaseReady=false;connection('Not saved · export & reload','error');toast(error.message);});
+  return saveQueue;
 }
 async function loadFromServer(){
   try{
-    const response=await fetch('/api/inventory');
+    const response=await fetch('/api/inventory',{signal:AbortSignal.timeout(10000)});
     if(!response.ok)throw new Error('Could not load inventory.');
     db=await response.json();
+    databaseReady=true;connection('Database connected','ready');
     localStorage.setItem(STORE_KEY,JSON.stringify(db));
     renderAll();renderEnhanced();
-  }catch(error){console.warn('Using browser backup because the API is unavailable.',error);}
+    const releaseResponse=await fetch('/api/releases');
+    if(releaseResponse.ok){releases=await releaseResponse.json();renderLogbook();}
+  }catch(error){databaseReady=false;connection('Offline · cached data','error');}
 }
+document.addEventListener('submit',event=>{if(!databaseReady && ['productForm','movementForm','supplierForm'].includes(event.target.id)){event.preventDefault();event.stopImmediatePropagation();toast('Connect the database before editing inventory.');}},true);
+document.addEventListener('click',event=>{
+  if(!databaseReady && event.target.closest('[data-delete-product],[data-delete-supplier],#resetDataBtn,#importBtn')){event.preventDefault();event.stopImmediatePropagation();toast('Connect the database before editing inventory.');}
+},true);
 function toast(message){const el=$('toast');el.textContent=message;el.classList.add('show');clearTimeout(toast.timer);toast.timer=setTimeout(()=>el.classList.remove('show'),2400)}
 function initials(name){return name.split(/\s+/).slice(0,2).map(x=>x[0]).join('').toUpperCase()}
 function productFor(id){return db.products.find(p=>p.id===id)}
@@ -156,11 +169,34 @@ function renderAnalytics(){
 function renderDistributionNetwork(){
   const regions=db.regions||[];
   if(!regions.length){$('globeStage').innerHTML='<div class="empty">Add sales destinations to view the distribution network.</div>';$('regionFeed').innerHTML='';return}
-  const point=region=>({x:300+region.longitude*1.22,y:200-region.latitude*1.55}),hub=regions.find(region=>region.city==='Mumbai')||regions[0],hubPoint=point(hub),selected=regions.find(region=>region.id===selectedRegionId)||regions[0],totalSales=regions.reduce((sum,region)=>sum+region.sales,0),totalUnits=regions.reduce((sum,region)=>sum+region.units,0),risk=regions.filter(region=>region.status==='risk').length;
-  const grid=[...Array(7)].map((_,index)=>`<ellipse cx="300" cy="200" rx="${68+index*31}" ry="170"/>`).join('')+[...Array(5)].map((_,index)=>`<ellipse cx="300" cy="200" rx="245" ry="${34+index*29}"/>`).join('');
-  const routes=regions.filter(region=>region.id!==hub.id).map(region=>{const target=point(region),controlX=(hubPoint.x+target.x)/2,controlY=Math.min(hubPoint.y,target.y)-56;return `<path class="route ${region.status}" d="M ${hubPoint.x} ${hubPoint.y} Q ${controlX} ${controlY} ${target.x} ${target.y}"/>`}).join('');
-  const nodes=regions.map(region=>{const p=point(region),active=region.id===selected.id?' active':'';return `<g class="globe-node ${region.status}${active}" data-region-id="${region.id}"><circle cx="${p.x}" cy="${p.y}" r="${region.id===hub.id?8:6}"/><circle class="node-pulse" cx="${p.x}" cy="${p.y}" r="10"/><text x="${p.x+10}" y="${p.y-9}">${escapeHtml(region.city)}</text><title>${escapeHtml(region.city)}: ${rupees.format(region.sales)} sales</title></g>`}).join('');
-  $('globeStage').innerHTML=`<svg viewBox="0 0 600 400" role="img" aria-label="Global distribution globe showing sales routes"><defs><radialGradient id="sphere" cx="35%" cy="25%"><stop stop-color="#2d6387"/><stop offset=".6" stop-color="#10283f"/><stop offset="1" stop-color="#071524"/></radialGradient><filter id="glow"><feGaussianBlur stdDeviation="3" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs><circle class="globe-sphere" cx="300" cy="200" r="178"/><g class="globe-grid">${grid}</g><path class="continent" d="M214 115l38-33 47 10 25 25-19 21-42 6-22 32-40-19zM314 166l42 18 18 48-17 58-21 22-23-65 11-42zM391 121l43 9 34 35-24 22-45-14-27-24z"/><g filter="url(#glow)">${routes}${nodes}</g><text class="hub-label" x="${hubPoint.x-5}" y="${hubPoint.y+25}">FULFILMENT HUB</text></svg>`;
+  const radians=Math.PI/180,cx=300,cy=198,radius=166,centerLongitude=55,centerLatitude=20*radians;
+  const point=region=>{
+    const longitude=(region.longitude-centerLongitude)*radians,latitude=region.latitude*radians;
+    const visibility=Math.sin(centerLatitude)*Math.sin(latitude)+Math.cos(centerLatitude)*Math.cos(latitude)*Math.cos(longitude);
+    return {x:cx+radius*Math.cos(latitude)*Math.sin(longitude),y:cy-radius*(Math.cos(centerLatitude)*Math.sin(latitude)-Math.sin(centerLatitude)*Math.cos(latitude)*Math.cos(longitude)),visible:visibility>0};
+  };
+  const pathFor=(coordinates,close=false)=>{
+    let path='',drawing=false;
+    for(const [longitude,latitude] of coordinates){const p=point({longitude,latitude});if(!p.visible){drawing=false;continue}path+=`${drawing?'L':'M'}${p.x.toFixed(1)} ${p.y.toFixed(1)} `;drawing=true}
+    return path+(close&&drawing?'Z':'');
+  };
+  const graticule=[];
+  for(let longitude=-120;longitude<=170;longitude+=20)graticule.push(pathFor(Array.from({length:71},(_,index)=>[longitude,-70+index*2])));
+  for(let latitude=-60;latitude<=70;latitude+=20)graticule.push(pathFor(Array.from({length:146},(_,index)=>[-125+index*2,latitude])));
+  const land=[
+    [[-17,36],[-5,43],[8,44],[18,55],[38,62],[65,72],[95,72],[125,61],[148,49],[145,34],[122,20],[112,5],[103,1],[96,15],[82,8],[72,20],[61,25],[50,30],[40,34],[30,38],[20,35],[9,37],[-2,35]],
+    [[-17,35],[6,37],[26,33],[42,13],[50,-7],[40,-25],[25,-35],[10,-31],[-4,-13],[-14,9]],
+    [[68,24],[78,31],[89,25],[86,18],[79,8],[73,9],[69,18]],
+    [[95,10],[108,20],[122,18],[132,7],[119,-7],[105,-5]],
+    [[112,-11],[140,-12],[153,-28],[136,-40],[116,-33]],
+    [[-10,58],[-2,60],[1,52],[-5,50]],
+    [[45,-13],[51,-16],[49,-25],[44,-22]]
+  ].map(shape=>`<path d="${pathFor(shape,true)}"/>`).join('');
+  const hub=regions.find(region=>region.city==='Mumbai')||regions[0],hubPoint=point(hub),selected=regions.find(region=>region.id===selectedRegionId)||regions[0],selectedPoint=point(selected),totalSales=regions.reduce((sum,region)=>sum+region.sales,0),totalUnits=regions.reduce((sum,region)=>sum+region.units,0);
+  const routes=regions.filter(region=>region.id!==hub.id).map(region=>{const target=point(region);if(!target.visible)return '';const dx=target.x-hubPoint.x,dy=target.y-hubPoint.y,length=Math.hypot(dx,dy)||1,curve=Math.min(58,length*.28),controlX=(hubPoint.x+target.x)/2+dy/length*curve,controlY=(hubPoint.y+target.y)/2-dx/length*curve;return `<path class="route ${region.status}" d="M${hubPoint.x.toFixed(1)} ${hubPoint.y.toFixed(1)} Q${controlX.toFixed(1)} ${controlY.toFixed(1)} ${target.x.toFixed(1)} ${target.y.toFixed(1)}"/>`}).join('');
+  const nodes=regions.map(region=>{const p=point(region);if(!p.visible)return '';const active=region.id===selected.id?' active':'';return `<g class="globe-node ${region.status}${active}" data-region-id="${region.id}" tabindex="0" role="button" aria-label="${escapeHtml(region.city)}, ${rupees.format(region.sales)} sales"><circle class="node-halo" cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="11"/><circle class="node-core" cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="${region.id===hub.id?5.5:4}"/><title>${escapeHtml(region.city)}: ${rupees.format(region.sales)} sales</title></g>`}).join('');
+  const selectedLabel=selectedPoint.visible?`<g class="map-callout"><path d="M${selectedPoint.x.toFixed(1)} ${selectedPoint.y.toFixed(1)} L${(selectedPoint.x+(selectedPoint.x>cx?-18:18)).toFixed(1)} ${(selectedPoint.y-25).toFixed(1)}"/><rect x="${(selectedPoint.x>cx?selectedPoint.x-126:selectedPoint.x+18).toFixed(1)}" y="${(selectedPoint.y-52).toFixed(1)}" width="108" height="35" rx="6"/><text x="${(selectedPoint.x>cx?selectedPoint.x-116:selectedPoint.x+28).toFixed(1)}" y="${(selectedPoint.y-37).toFixed(1)}">${escapeHtml(selected.city)}</text><text class="callout-value" x="${(selectedPoint.x>cx?selectedPoint.x-116:selectedPoint.x+28).toFixed(1)}" y="${(selectedPoint.y-25).toFixed(1)}">${rupees.format(selected.sales)} · ${selected.units} units</text></g>`:'';
+  $('globeStage').innerHTML=`<svg viewBox="0 0 600 400" role="img" aria-label="Interactive globe showing sales and distribution routes"><defs><radialGradient id="ocean" cx="34%" cy="28%"><stop offset="0" stop-color="#326783"/><stop offset=".58" stop-color="#153b53"/><stop offset="1" stop-color="#071c2d"/></radialGradient><radialGradient id="atmosphere"><stop offset="72%" stop-color="#5bd7e5" stop-opacity="0"/><stop offset="94%" stop-color="#5bd7e5" stop-opacity=".16"/><stop offset="100%" stop-color="#b5f6ff" stop-opacity=".48"/></radialGradient><linearGradient id="shade" x1="0" x2="1"><stop offset=".35" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".48"/></linearGradient><clipPath id="globeClip"><circle cx="${cx}" cy="${cy}" r="${radius}"/></clipPath></defs><ellipse class="globe-shadow" cx="300" cy="374" rx="130" ry="12"/><circle class="globe-sphere" cx="${cx}" cy="${cy}" r="${radius}"/><g clip-path="url(#globeClip)"><g class="globe-grid">${graticule.map(path=>`<path d="${path}"/>`).join('')}</g><g class="continent-shape">${land}</g>${routes}<ellipse class="earth-shade" cx="385" cy="198" rx="104" ry="168"/></g><circle class="globe-atmosphere" cx="${cx}" cy="${cy}" r="${radius}"/>${nodes}<g class="hub-marker"><circle cx="${hubPoint.x.toFixed(1)}" cy="${hubPoint.y.toFixed(1)}" r="9"/><text x="${(hubPoint.x+12).toFixed(1)}" y="${(hubPoint.y+20).toFixed(1)}">PRIMARY HUB</text></g>${selectedLabel}<g class="globe-legend"><circle class="healthy" cx="218" cy="386" r="3"/><text x="226" y="389">On track</text><circle class="watch" cx="294" cy="386" r="3"/><text x="302" y="389">Watch</text><circle class="risk" cx="354" cy="386" r="3"/><text x="362" y="389">Risk</text></g></svg>`;
   $('distributionStats').innerHTML=`<article><span>Territory sales</span><strong>${rupees.format(totalSales)}</strong></article><article><span>Units dispatched</span><strong>${totalUnits.toLocaleString('en-IN')}</strong></article><article><span>Active regions</span><strong>${regions.length}</strong></article><article class="selected-region"><span>${escapeHtml(selected.city)} status</span><strong>${selected.status==='risk'?'Needs attention':selected.status==='watch'?'Monitor closely':'On track'}</strong><small>${rupees.format(selected.sales)} · ${selected.units} units</small></article>`;
   $('regionFeed').innerHTML=regions.map(region=>`<button class="region-item ${region.status}${region.id===selected.id?' active':''}" data-region-id="${region.id}"><span class="region-dot"></span><div><strong>${escapeHtml(region.city)}</strong><small>${escapeHtml(region.country)} · ${region.units} units</small></div><b>${rupees.format(region.sales)}</b></button>`).join('');
 }
@@ -219,12 +255,13 @@ function logActivity(action,detail=''){
 }
 const baseSave=save;
 save=function(){
-  baseSave();
-  logActivity('Inventory data updated','Products, suppliers, or stock movements were changed.');
+  const pending=baseSave();
   renderNotifications();
   if($('logbookView')?.classList.contains('active'))renderLogbook();
+  return pending;
 };
 function renderLogbook(){
+  $('releaseLog').innerHTML=releases.length?releases.map(item=>`<div class="activity-item"><span class="activity-dot"></span><div><strong>${escapeHtml(item.action)}</strong><p>${escapeHtml(item.detail)}</p><small>${shortDate.format(new Date(item.date))} · Product release</small></div></div>`).join(''):'<p>Connect to the database to load product updates.</p>';
   const items=workspace.activity;
   $('logbookSummary').textContent=`${items.length} ${items.length===1?'event':'events'} recorded in this workspace`;
   $('activityList').innerHTML=items.length?items.map(item=>`<div class="activity-item"><span class="activity-dot"></span><div><strong>${escapeHtml(item.action)}</strong><p>${escapeHtml(item.detail)}</p><small>${shortDate.format(new Date(item.date))} · ${escapeHtml(roleDetails[item.role]?.label||'Administrator')}</small></div></div>`).join(''):'<div class="empty">No activity has been recorded yet.</div>';
@@ -280,6 +317,7 @@ renderEnhanced();
 showView(viewMeta[location.hash.slice(1)]?location.hash.slice(1):'dashboard');
 if(!workspace.role)$('welcomeDialog').showModal();
 loadFromServer();
+$('connectionStatus').onclick=()=>{if(confirm('Reload the latest database records? Export CSV first if you have unsaved changes.'))loadFromServer();};
 
 /* Data-aware inventory assistant. It answers from the live database without sending
    company data to a third-party AI service. */
@@ -315,3 +353,4 @@ $('assistantClose').onclick=()=>{$('assistantPanel').classList.remove('open');$(
 $('assistantForm').addEventListener('submit',event=>{event.preventDefault();askAssistant($('assistantInput').value);$('assistantInput').value=''});
 document.addEventListener('click',event=>{const suggestion=event.target.closest('[data-assistant-question]');if(suggestion)askAssistant(suggestion.dataset.assistantQuestion)});
 document.addEventListener('click',event=>{const region=event.target.closest('[data-region-id]');if(region){selectedRegionId=region.dataset.regionId;renderDistributionNetwork();}});
+document.addEventListener('keydown',event=>{const region=event.target.closest?.('[data-region-id]');if(region&&(event.key==='Enter'||event.key===' ')){event.preventDefault();selectedRegionId=region.dataset.regionId;renderDistributionNetwork();}});

@@ -5,7 +5,8 @@
   "description": "InvenTrack inventory management system with a Node.js and SQLite backend.",
   "scripts": {
     "start": "node server.js",
-    "dev": "node --watch server.js"
+    "dev": "node --watch server.js",
+    "test": "node tests/backend.cjs"
   },
   "engines": {
     "node": ">=22.5.0"

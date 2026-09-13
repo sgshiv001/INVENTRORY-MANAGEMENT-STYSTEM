@@ -1,5 +1,13 @@
 # InvenTrack — Inventory Management & Operational Intelligence System
 
+## September 13, 2026 — Edition 3 workspace update
+
+New forest-green and warm-white dashboard with larger labels, solid surfaces and sharp chart text. Includes visible database status, serialized saves, revision conflict protection, SQLite WAL mode, restricted static-file serving and database-backed product release notes in the Log book. Existing inventory remains in `data/inventrack.db`.
+
+The distribution globe now uses an orthographic spherical projection with clear land shapes, atmosphere, route arcs, status markers and keyboard-accessible territory selection.
+
+Run `node server.js`; check the backend with `node tests/backend.cjs`. See [LAUNCH.md](LAUNCH.md) for local database operation, domain hosting and the remaining work before selling this as a customer subscription service. This release does not add customer authentication, organization isolation or billing.
+
 [![Academic Project](https://img.shields.io/badge/Project-MCA%20Academic%20Mini%20Project-blue.svg)](#project-specification)
 [![Academic Year](https://img.shields.io/badge/Academic%20Year-2026-brightgreen.svg)](#project-specification)
 [![Architecture](https://img.shields.io/badge/Architecture-Full--Stack%20SPA-orange.svg)](#system-architecture--core-modules)

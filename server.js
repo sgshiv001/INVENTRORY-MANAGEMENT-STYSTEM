@@ -6,7 +6,7 @@ const { DatabaseSync } = require('node:sqlite');
 
 const PORT = Number(process.env.PORT || 3000);
 const ROOT = __dirname;
-const DB_PATH = path.join(ROOT, 'data', 'inventrack.db');
+const DB_PATH = path.resolve(process.env.DB_PATH || path.join(ROOT, 'data', 'inventrack.db'));
 fs.mkdirSync(path.dirname(DB_PATH), { recursive: true });
 
 const seed = {
@@ -41,6 +41,11 @@ const seed = {
 
 const db = new DatabaseSync(DB_PATH);
 db.exec(`PRAGMA foreign_keys = ON;
+  PRAGMA journal_mode = WAL;
+  PRAGMA busy_timeout = 5000;
+  CREATE TABLE IF NOT EXISTS metadata (key TEXT PRIMARY KEY, value INTEGER NOT NULL);
+  INSERT OR IGNORE INTO metadata VALUES ('revision', 0);
+  CREATE TABLE IF NOT EXISTS release_log (id TEXT PRIMARY KEY, action TEXT NOT NULL, detail TEXT NOT NULL, date TEXT NOT NULL);
   CREATE TABLE IF NOT EXISTS suppliers (id TEXT PRIMARY KEY, name TEXT NOT NULL, contact TEXT, phone TEXT, email TEXT, address TEXT);
   CREATE TABLE IF NOT EXISTS products (id TEXT PRIMARY KEY, name TEXT NOT NULL, sku TEXT NOT NULL COLLATE NOCASE UNIQUE, category TEXT NOT NULL, quantity INTEGER NOT NULL CHECK(quantity >= 0), reorder_level INTEGER NOT NULL CHECK(reorder_level >= 0), cost REAL NOT NULL CHECK(cost >= 0), price REAL NOT NULL CHECK(price >= 0), supplier_id TEXT REFERENCES suppliers(id) ON DELETE SET NULL);
   CREATE TABLE IF NOT EXISTS movements (id TEXT PRIMARY KEY, product_id TEXT NOT NULL, type TEXT NOT NULL CHECK(type IN ('in', 'out', 'adjustment')), quantity INTEGER NOT NULL CHECK(quantity >= 0), balance INTEGER NOT NULL CHECK(balance >= 0), reference TEXT, notes TEXT, date TEXT NOT NULL);
@@ -48,6 +53,7 @@ db.exec(`PRAGMA foreign_keys = ON;
 
 function rows() {
   return {
+    revision: db.prepare("SELECT value FROM metadata WHERE key='revision'").get().value,
     suppliers: db.prepare('SELECT id, name, contact, phone, email, address FROM suppliers ORDER BY name').all(),
     products: db.prepare('SELECT id, name, sku, category, quantity, reorder_level AS reorder, cost, price, COALESCE(supplier_id, \'\') AS supplierId FROM products ORDER BY rowid DESC').all(),
     movements: db.prepare('SELECT id, product_id AS productId, type, quantity, balance, reference, notes, date FROM movements ORDER BY date DESC').all(),
@@ -56,27 +62,42 @@ function rows() {
 }
 function replaceInventory(payload) {
   if (!payload || !Array.isArray(payload.suppliers) || !Array.isArray(payload.products) || !Array.isArray(payload.movements)) throw new Error('Expected suppliers, products, and movements arrays.');
+  for (const collection of [payload.suppliers, payload.products, payload.movements, payload.regions || []]) {
+    if (!Array.isArray(collection) || collection.length > 10000) throw new Error('Invalid collection size.');
+    for (const item of collection) if (!item || typeof item.id !== 'string' || !/^[a-zA-Z0-9_-]{1,80}$/.test(item.id)) throw new Error('Invalid record ID.');
+  }
+  for (const p of payload.products) {
+    if (![p.name,p.sku,p.category].every(v=>typeof v==='string' && v.trim() && v.length<=100)) throw new Error('Product name, SKU and category are required.');
+    if (![p.quantity,p.reorder].every(v=>Number.isSafeInteger(v)&&v>=0) || ![p.cost,p.price].every(v=>Number.isFinite(v)&&v>=0)) throw new Error('Invalid product quantity or price.');
+  }
+  for (const m of payload.movements) if (![m.quantity,m.balance].every(v=>Number.isSafeInteger(v)&&v>=0) || !Number.isFinite(Date.parse(m.date))) throw new Error('Invalid stock movement.');
   const insertSupplier = db.prepare('INSERT INTO suppliers VALUES (?, ?, ?, ?, ?, ?)');
   const insertProduct = db.prepare('INSERT INTO products VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)');
   const insertMovement = db.prepare('INSERT INTO movements VALUES (?, ?, ?, ?, ?, ?, ?, ?)');
   const insertRegion = db.prepare('INSERT INTO sales_regions VALUES (?, ?, ?, ?, ?, ?, ?, ?)');
   db.exec('BEGIN');
   try {
-    db.exec('DELETE FROM movements; DELETE FROM products; DELETE FROM suppliers; DELETE FROM sales_regions;');
+    db.exec('DELETE FROM movements; DELETE FROM products; DELETE FROM suppliers;');
+    if (payload.regions) db.exec('DELETE FROM sales_regions;');
     for (const s of payload.suppliers) insertSupplier.run(s.id, s.name, s.contact || '', s.phone || '', s.email || '', s.address || '');
     for (const p of payload.products) insertProduct.run(p.id, p.name, p.sku, p.category, p.quantity, p.reorder, p.cost, p.price, p.supplierId || null);
     for (const m of payload.movements) insertMovement.run(m.id, m.productId, m.type, m.quantity, m.balance, m.reference || '', m.notes || '', m.date);
     for (const region of (payload.regions || [])) insertRegion.run(region.id, region.city, region.country, region.latitude, region.longitude, region.sales, region.units, region.status);
-    db.exec('COMMIT');
+    db.exec("UPDATE metadata SET value=value+1 WHERE key='revision'; COMMIT;");
   } catch (error) { db.exec('ROLLBACK'); throw error; }
 }
-if (!db.prepare('SELECT 1 FROM products LIMIT 1').get()) replaceInventory(seed);
+if (!db.prepare("SELECT 1 FROM metadata WHERE key='initialized'").get()) {
+  if (!db.prepare('SELECT 1 FROM products LIMIT 1').get() && !db.prepare('SELECT 1 FROM suppliers LIMIT 1').get()) replaceInventory(seed);
+  db.prepare("INSERT INTO metadata VALUES ('initialized',1)").run();
+}
 if (!db.prepare('SELECT 1 FROM sales_regions LIMIT 1').get()) {
   const insertRegion = db.prepare('INSERT INTO sales_regions VALUES (?, ?, ?, ?, ?, ?, ?, ?)');
   for (const region of seed.regions) insertRegion.run(region.id, region.city, region.country, region.latitude, region.longitude, region.sales, region.units, region.status);
 }
 
-function send(res, code, body, type = 'application/json') { res.writeHead(code, { 'Content-Type': `${type}; charset=utf-8` }); res.end(type === 'application/json' ? JSON.stringify(body) : body); }
+db.prepare('INSERT OR IGNORE INTO release_log VALUES (?,?,?,?)').run('edition-3-20260913', 'Edition 3 — Clear workspace', 'New forest-green dashboard, larger readable text, sharp charts, database status and serialized saves. Added revision conflict protection, SQLite WAL, private-file protection and a domain/commercial launch guide.', '2026-09-13T12:00:00Z');
+db.prepare('INSERT OR IGNORE INTO release_log VALUES (?,?,?,?)').run('globe-refresh-20260913', 'Distribution globe refresh', 'Rebuilt the sales globe with an orthographic spherical projection, geographic land shapes, atmospheric depth, clean route arcs, accessible region markers and a focused location callout.', '2026-09-13T13:00:00Z');
+function send(res, code, body, type = 'application/json') { res.writeHead(code, { 'Content-Type': `${type}; charset=utf-8`, 'Cache-Control':'no-store', 'X-Content-Type-Options':'nosniff', 'X-Frame-Options':'DENY' }); res.end(type === 'application/json' ? JSON.stringify(body) : body); }
 function body(req) { return new Promise((resolve, reject) => { let raw = ''; req.on('data', chunk => { raw += chunk; if (raw.length > 1_000_000) reject(new Error('Request body is too large.')); }); req.on('end', () => { try { resolve(JSON.parse(raw || '{}')); } catch { reject(new Error('Invalid JSON.')); } }); }); }
 const mime = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.svg': 'image/svg+xml', '.png': 'image/png' };
 
@@ -84,10 +105,17 @@ http.createServer(async (req, res) => {
   try {
     const url = new URL(req.url, `http://${req.headers.host}`);
     if (url.pathname === '/api/inventory' && req.method === 'GET') return send(res, 200, rows());
-    if (url.pathname === '/api/inventory' && req.method === 'PUT') { replaceInventory(await body(req)); return send(res, 200, rows()); }
+    if (url.pathname === '/api/inventory' && req.method === 'PUT') {
+      if (req.headers.origin && new URL(req.headers.origin).host !== req.headers.host) return send(res,403,{error:'Cross-origin writes are not allowed.'});
+      const payload=await body(req);
+      if (payload.revision !== rows().revision) return send(res,409,{error:'Inventory changed in another session. Reload before editing.'});
+      replaceInventory(payload); return send(res, 200, rows());
+    }
+    if (url.pathname === '/api/releases' && req.method === 'GET') return send(res,200,db.prepare('SELECT * FROM release_log ORDER BY date DESC').all());
     if (url.pathname === '/api/health') return send(res, 200, { status: 'ok' });
     if (req.method !== 'GET' && req.method !== 'HEAD') return send(res, 405, { error: 'Method not allowed.' });
     const requested = url.pathname === '/' ? 'index.html' : decodeURIComponent(url.pathname).replace(/^\/+/, '');
+    if (!['index.html','styles.css','workspace.css','app.js'].includes(requested)) return send(res,404,'Not found','text/plain');
     const file = path.resolve(ROOT, requested);
     if (!file.startsWith(`${ROOT}${path.sep}`) || !fs.existsSync(file) || fs.statSync(file).isDirectory()) return send(res, 404, 'Not found', 'text/plain');
     return send(res, 200, req.method === 'HEAD' ? '' : fs.readFileSync(file), mime[path.extname(file)] || 'application/octet-stream');

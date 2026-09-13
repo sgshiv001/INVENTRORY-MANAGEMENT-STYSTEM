@@ -8,13 +8,14 @@
   <meta name="theme-color" content="#14213d">
   <title>InvenTrack | MCA Inventory Management System</title>
   <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="workspace.css">
 </head>
 <body>
   <div class="app-shell">
     <aside class="sidebar" id="sidebar">
       <a class="brand" href="#dashboard" aria-label="InvenTrack home">
         <span class="brand-mark">IT</span>
-        <span><strong>InvenTrack</strong><small>MCA Project</small></span>
+        <span><strong>InvenTrack</strong><small>OPERATIONS WORKSPACE</small></span>
       </a>
       <nav aria-label="Main navigation">
         <button class="nav-link active" data-view="dashboard"><span class="nav-icon">D</span> Dashboard</button>
@@ -27,9 +28,9 @@
         <button class="nav-link" data-view="about"><span class="nav-icon">i</span> About Project</button>
       </nav>
       <div class="sidebar-footer">
-        <span class="course-badge">ACADEMIC DEMO</span>
-        <p>Master of Computer Applications</p>
-        <small>Frontend mini project &middot; 2026</small>
+        <span class="course-badge">WORKSPACE / 01</span>
+        <p>Your inventory. In focus.</p>
+        <small>InvenTrack · Edition 3.0</small>
       </div>
     </aside>
 
@@ -41,6 +42,7 @@
           <p id="pageSubtitle">A clear view of your inventory today.</p>
         </div>
         <div class="topbar-actions">
+          <button class="connection-status" id="connectionStatus" type="button" title="Reload inventory from database">Connecting…</button>
           <button type="button" class="role-chip" id="roleChip" title="Change workspace role" aria-label="Change workspace role">Admin workspace</button>
           <button class="icon-btn theme-toggle" id="themeToggle" title="Toggle dark mode" aria-label="Toggle dark mode">&#9790;</button>
           <button class="icon-btn notification-btn" id="notificationBtn" title="Open notifications" aria-label="Open notifications">&#128276;<b id="notificationCount">0</b></button>
@@ -54,8 +56,8 @@
       <section class="view active" id="dashboardView">
         <section class="dashboard-welcome">
           <div class="welcome-topline"><span>HOME</span><span id="dashboardDate">Today</span></div>
-          <h2>What would you like to manage?</h2>
-          <p>Search your catalogue, open an operational module, or review the latest company performance.</p>
+          <h2>A clear picture.<br><em>A better next move.</em></h2>
+          <p>Inventory, partners and performance. Everything you need to keep business moving.</p>
           <form class="dashboard-search" id="dashboardSearchForm"><input id="dashboardSearch" type="search" placeholder="Search products, SKUs, or categories..." aria-label="Search inventory"><button class="btn primary">Search inventory</button></form>
         </section>
 
@@ -174,6 +176,7 @@
           <div><span class="eyebrow">AUDIT TRAIL</span><h2>Every decision, in one place.</h2><p>Review stock changes, catalogue updates, and workspace events with a clear operational timeline.</p></div>
           <button class="btn secondary" id="clearLogBtn">Clear activity</button>
         </div>
+        <article class="panel"><div class="panel-head"><div><h2>Product updates</h2><p>Release history stored in your database</p></div></div><div class="activity-list" id="releaseLog"></div></article>
         <article class="panel">
           <div class="panel-head"><div><h2>Activity log</h2><p id="logbookSummary">Recent workspace events</p></div></div>
           <div class="activity-list" id="activityList"></div>
