@@ -1,12 +1,4 @@
-# InvenTrack — Inventory Management & Operational Intelligence System
-
-## September 13, 2026 — Edition 3 workspace update
-
-New forest-green and warm-white dashboard with larger labels, solid surfaces and sharp chart text. Includes visible database status, serialized saves, revision conflict protection, SQLite WAL mode, restricted static-file serving and database-backed product release notes in the Log book. Existing inventory remains in `data/inventrack.db`.
-
-The distribution globe now uses an orthographic spherical projection with clear land shapes, atmosphere, route arcs, status markers and keyboard-accessible territory selection.
-
-Run `node server.js`; check the backend with `node tests/backend.cjs`. See [LAUNCH.md](LAUNCH.md) for local database operation, domain hosting and the remaining work before selling this as a customer subscription service. This release does not add customer authentication, organization isolation or billing.
+# InvenTrack - Inventory Management & Operational Intelligence System
 
 [![Academic Project](https://img.shields.io/badge/Project-MCA%20Academic%20Mini%20Project-blue.svg)](#project-specification)
 [![Academic Year](https://img.shields.io/badge/Academic%20Year-2026-brightgreen.svg)](#project-specification)
@@ -14,7 +6,33 @@ Run `node server.js`; check the backend with `node tests/backend.cjs`. See [LAUN
 [![Technology](https://img.shields.io/badge/Stack-HTML5%20%7C%20CSS3%20%7C%20Node.js%20%7C%20SQLite-darkblue.svg)](#system-architecture--core-modules)
 [![Theme Support](https://img.shields.io/badge/Theme-Light%20%26%20Dark%20Mode-violet.svg)](#key-features--capabilities)
 
-**InvenTrack** is a modern, responsive full-stack inventory management and operational intelligence web application developed as an MCA academic mini project. Its browser interface is served by a Node.js API, which persists products, suppliers, and stock movements in a SQLite database.
+**InvenTrack** is a modern inventory management and operational intelligence web application built for small businesses, suppliers, distributors, and academic demonstration. It helps a company manage products, stock movements, suppliers, reorder planning, market value, inventory value, and operational activity from one clean dashboard.
+
+The project is a full-stack single-page application. The frontend is built with HTML, CSS, and JavaScript, while the backend is a Node.js server connected to a local SQLite database. Inventory data is saved in `data/inventrack.db`, and the browser keeps only workspace preferences and an offline backup.
+
+The dashboard includes role-based workspaces for administrators, suppliers, distributors, retailers, and wholesalers. It also includes charts, business statistics, a sales-region globe, a log book, and a local data-aware chatbot for asking inventory questions.
+
+## Quick Start
+
+Run the complete website locally:
+
+```bash
+node server.js
+```
+
+Then open:
+
+```text
+http://localhost:3000
+```
+
+Run backend checks:
+
+```bash
+node tests/backend.cjs
+```
+
+See [LAUNCH.md](LAUNCH.md) for domain hosting, deployment, database notes, and the remaining work needed before selling it as a live customer subscription product.
 
 ---
 
@@ -28,10 +46,11 @@ Run `node server.js`; check the backend with `node tests/backend.cjs`. See [LAUN
 6. [Changelog & Chronological Development](#changelog--chronological-development)
 7. [Validation & Business Logic](#validation--business-logic)
 8. [Local Execution & Debugging](#local-execution--debugging)
-9. [Python Reporting Utility](#python-reporting-utility)
-10. [Repository Structure](#repository-structure)
-11. [Quality Assurance & Test Scenarios](#quality-assurance--test-scenarios)
-12. [Limitations & Future Roadmap](#limitations--future-roadmap)
+9. [Deployment Notes](#deployment-notes)
+10. [Python Reporting Utility](#python-reporting-utility)
+11. [Repository Structure](#repository-structure)
+12. [Quality Assurance & Test Scenarios](#quality-assurance--test-scenarios)
+13. [Limitations & Future Roadmap](#limitations--future-roadmap)
 
 ---
 
@@ -161,6 +180,9 @@ The data layer models an operational supply chain using normalized entity relati
 * **Live Role Switcher:** Quick-access topbar chip enabling seamless switching between operational profiles without data reset.
 * **Low-Stock Notification Center:** Interactive bell icon with dynamic badge count displaying real-time alert items requiring immediate procurement attention, featuring click-outside auto-dismissal.
 * **Dark / Light Theme Engine:** Persisted visual styling with high-contrast color variables conforming to modern accessibility standards.
+* **Executive Dashboard:** Clean professional dashboard with inventory value, market value, supplier/distributor summaries, stock readiness, and readable business charts.
+* **Sales Region Globe:** Interactive world-sales visualization showing where products are selling and where expansion opportunities are available.
+* **Local Inventory Assistant:** Built-in chatbot that answers inventory questions from the current database without sending stock data to a third-party AI service.
 * **Dual-Direction CSV Engine:**
   * **Export:** One-click CSV generation capturing full catalogue records, computed valuations, margins, and supplier names.
   * **Import:** Client-side CSV parser supporting RFC 4180 quoting, header validation, duplicate SKU detection, and auto-generated opening stock audit records.
@@ -169,6 +191,16 @@ The data layer models an operational supply chain using normalized entity relati
 ---
 
 ## Changelog & Chronological Development
+
+### Latest Project Update - September 13, 2026
+
+The project was upgraded into a more complete full-stack management dashboard. The latest version includes a professional forest-green and warm-white interface, larger readable labels, solid dashboard panels, sharp charts, visible database status, safer backend saving, SQLite WAL mode, and restricted static-file serving.
+
+The distribution globe was rebuilt with a cleaner orthographic world projection, land shapes, route arcs, status markers, region selection, and clearer business labels. The Log book now shows database-backed product release notes, and the backend can be checked with:
+
+```bash
+node tests/backend.cjs
+```
 
 This project was developed incrementally through continuous feature additions, performance refinements, and code quality audits:
 
@@ -279,6 +311,16 @@ Choose **Launch InvenTrack Server** in the Run and Debug panel, then press **F5*
 
 ---
 
+## Deployment Notes
+
+The current project runs as a Node.js website with a SQLite database. For local use, `data/inventrack.db` is created on the same computer that runs `server.js`.
+
+To make it accessible outside localhost, deploy the Node.js server to a hosting platform such as Render, Railway, Fly.io, a VPS, or another Node-compatible host. A custom domain can then point to that hosted server. For a production business version, the next required additions are real customer login, organization isolation, payment/billing, backups, and stronger database hosting such as PostgreSQL.
+
+See [LAUNCH.md](LAUNCH.md) for the detailed deployment path.
+
+---
+
 ## Python Reporting Utility
 
 An offline reporting utility is included in `tools/inventory_report.py`. It inspects the baseline catalogue and outputs formal inventory reports suitable for academic documentation and grading submissions.
@@ -308,15 +350,19 @@ INVENTORY MANAGEMENT SYSTEM/
 ├── reports/
 │   ├── inventory.csv          # Sample generated CSV inventory report
 │   └── summary.md             # Sample generated Markdown inventory summary
+├── tests/
+│   └── backend.cjs            # Backend persistence and API safety checks
 ├── tools/
 │   └── inventory_report.py    # Python reporting and analytical script
 ├── .gitattributes             # Git line-ending and diff attributes
+├── LAUNCH.md                  # Hosting, domain, and selling-readiness guide
 ├── app.js                     # Core application logic, routing, persistence & UI handlers
 ├── index.html                 # Semantic application layouts, views, and modal dialogs
 ├── package.json               # Node.js start and development scripts
 ├── README.md                  # Comprehensive project documentation
 ├── server.js                  # Node.js API, static server, and SQLite schema
-└── styles.css                 # Responsive layout, color system, and dark mode theme
+├── styles.css                 # Responsive layout, color system, and dark mode theme
+└── workspace.css              # Modern dashboard, globe, and workspace refresh styles
 ```
 
 ---
